@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: src
+    command: python manage.py runserver
+    environment:
+      - FIELD_KEY=${FIELD_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379
+      - MEMCACHEDCLOUD_SERVERS=memcached:11211
+    expose:
+      - 4444
+    ports:
+      - "4444:4444"
+    depends_on:
+      - database
+      - redis
+    volumes:
+      - .:/usr/src/app
