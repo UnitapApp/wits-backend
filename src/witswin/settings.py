@@ -9,6 +9,8 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
+import dj_database_url
+import os
 
 from pathlib import Path
 
@@ -25,12 +27,18 @@ SECRET_KEY = 'django-insecure-2+aj%(1gmczhxrb+oxf2dc827+ex+sn=)2*i&x7m99)#=1)3yq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+
+REDIS_HOST = os.environ.get("REDIS_HOST")
+REDIS_PORT = os.environ.get("REDIS_PORT")
+
+
 ALLOWED_HOSTS = []
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'quiztap.apps.QuiztapConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -69,18 +77,12 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'witswin.wsgi.application'
+ASGI_APPLICATION = "witswin.asgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+DATABASES = {"default": dj_database_url.config(conn_max_age=600)}
 
 
 # Password validation
@@ -123,3 +125,18 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+
+ASGI_APPLICATION = "witswin.asgi.application"
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+}

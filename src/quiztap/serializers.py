@@ -1,10 +1,6 @@
-from django.core.cache import cache
 from rest_framework import serializers
 
-from authentication.serializers import SimpleProfilerSerializer
-from core.serializers import SponsorSerializer
 from quiztap.models import Choice, Competition, Question, UserAnswer, UserCompetition
-from quiztap.utils import is_user_eligible_to_participate
 
 
 class SmallQuestionSerializer(serializers.ModelSerializer):
@@ -14,19 +10,13 @@ class SmallQuestionSerializer(serializers.ModelSerializer):
 
 
 class CompetitionSerializer(serializers.ModelSerializer):
-    username = serializers.SerializerMethodField()
     questions = SmallQuestionSerializer(many=True, read_only=True)
-    sponsor = SponsorSerializer(read_only=True)
 
     class Meta:
         model = Competition
         exclude = (
-            "user_profile",
             "participants",
         )
-
-    def get_username(self, comp: Competition):
-        return comp.user_profile.username
 
 
 class ChoiceSerializer(serializers.ModelSerializer):
@@ -44,7 +34,6 @@ class ChoiceSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     competition = CompetitionSerializer()
     choices = ChoiceSerializer(many=True)
-    is_eligible = serializers.SerializerMethodField(read_only=True)
     remain_participants_count = serializers.SerializerMethodField(read_only=True)
     total_participants_count = serializers.SerializerMethodField(read_only=True)
     amount_won_per_user = serializers.SerializerMethodField(read_only=True)
@@ -53,35 +42,20 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = "__all__"
 
-    def get_is_eligible(self, ques: Question):
-        try:
-            user_profile = self.context.get("request").user.profile
-        except AttributeError:
-            return False
-        else:
-            return is_user_eligible_to_participate(user_profile, ques.competition)
-
     def get_remain_participants_count(self, ques: Question):
-        remain_participants_count = cache.get(
-            f"comp_{ques.competition.pk}_eligible_users_count"
-        )
-        return (
-            remain_participants_count
-            if remain_participants_count is not None
-            else cache.get(f"comp_{ques.competition.pk}_total_participants_count")
-        )
+        users_answered_correct = ques.users_answer.filter(
+            selected_choice__is_correct=True
+        ).distinct("user_competition__pk")
+
+        return users_answered_correct.count()
 
     def get_total_participants_count(self, ques: Question):
-        total_participants_count = cache.get(
-            f"comp_{ques.competition.pk}_total_participants_count"
-        )
-        return total_participants_count
+        return ques.competition.participants.count()
 
     def get_amount_won_per_user(self, ques: Question):
         prize_amount = ques.competition.prize_amount
-        remain_participants_count = cache.get(
-            f"comp_{ques.competition.pk}_eligible_users_count"
-        )
+        remain_participants_count = self.get_remain_participants_count(ques)
+
         try:
             prize_amount_per_user = prize_amount / remain_participants_count
             return prize_amount_per_user
@@ -96,9 +70,8 @@ class QuestionSerializer(serializers.ModelSerializer):
                 ques.competition.is_active
                 and ques.competition.can_be_shown
             ):
-                remain_participants_count = cache.get(
-                    f"comp_{ques.competition.pk}_total_participants_count", 1
-                )
+                remain_participants_count = self.get_total_participants_count(ques)
+
                 return prize_amount / remain_participants_count
 
 
@@ -134,7 +107,6 @@ class UserCompetitionSerializer(serializers.ModelSerializer):
             is_active=True
         )
     )
-    user_profile = SimpleProfilerSerializer(read_only=True)
 
     class Meta:
         model = UserCompetition

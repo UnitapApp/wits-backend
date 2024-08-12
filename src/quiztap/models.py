@@ -9,7 +9,7 @@ from .constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
 
 
 
-class CompetitionManager(BaseModel):
+class CompetitionManager(models.Manager):
     @property
     def not_started(self):
         return self.filter(start_at__lt=timezone.now())
@@ -47,6 +47,9 @@ class Competition(BaseModel):
     telegram_url = models.URLField(max_length=255, null=True, blank=True)
     image_url = models.URLField(max_length=255, null=True, blank=True)
     token_image_url = models.URLField(max_length=255, null=True, blank=True)
+
+    questions: models.QuerySet
+    participants: models.QuerySet
 
     winner_count = models.IntegerField(default=0)
     amount_won = models.PositiveBigIntegerField(default=0)
@@ -86,6 +89,7 @@ class Question(BaseModel):
         null=False, blank=False, validators=[MinValueValidator(1)]
     )
     text = models.TextField()
+    users_answer: models.QuerySet
 
     @property
     def can_be_shown(self):

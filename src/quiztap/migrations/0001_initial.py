@@ -17,5 +17,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(raise_migrations_not_allowed)
     ]
