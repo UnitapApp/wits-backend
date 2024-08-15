@@ -1,6 +1,6 @@
 services:
   backend:
-    build: src
+    build: .
     command: python manage.py runserver
     environment:
       - FIELD_KEY=${FIELD_KEY}
@@ -17,4 +17,33 @@ services:
       - database
       - redis
     volumes:
-      - .:/usr/src/app
+      - ./src/:/usr/src/app
+
+  database:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  redis:
+    platform: linux/amd64
+    image: redis:6.2-alpine
+    restart: always
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - cache:/data
+
+  memcached:
+    container_name: memcached
+    image: memcached:latest
+    ports:
+        - "11211:11211"
+volumes:
+  db:
+    driver: local
+  cache:
+    driver: local

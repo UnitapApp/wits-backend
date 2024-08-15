@@ -3,9 +3,16 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.db.models import F
-
-from lib.models import BaseModel
 from .constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
+
+
+
+
+class Sponsor(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    link = models.URLField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    image = CloudflareImagesField(blank=True, null=True, variant="public")
 
 
 
@@ -33,12 +40,25 @@ class CompetitionManager(models.Manager):
         )
 
 
-class Competition(BaseModel):
+class Competition(models.Model):
     title = models.CharField(max_length=255)
+    sponsor = models.ManyToManyField(
+        Sponsor,
+        related_name="competitions",
+        blank=True,
+    )
+    user_profile = models.PositiveBigIntegerField()
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     start_at = models.DateTimeField(null=False, blank=False)
-    prize_amount = models.PositiveBigIntegerField(null=False, blank=False)
+    prize_amount = BigNumField(null=False, blank=False)
+    chain = models.ForeignKey(
+        Chain,
+        blank=False,
+        null=False,
+        on_delete=models.PROTECT,
+        related_name="competitions",
+    )
     token = models.CharField(max_length=100)
     token_address = models.CharField(max_length=255)
     discord_url = models.URLField(max_length=255, null=True, blank=True)
@@ -48,30 +68,33 @@ class Competition(BaseModel):
     image_url = models.URLField(max_length=255, null=True, blank=True)
     token_image_url = models.URLField(max_length=255, null=True, blank=True)
 
-    questions: models.QuerySet
-    participants: models.QuerySet
-
+    participants = models.ManyToManyField(
+        UserProfile, through="UserCompetition", related_name="participated_competitions"
+    )
     winner_count = models.IntegerField(default=0)
-    amount_won = models.PositiveBigIntegerField(default=0)
+    amount_won = BigNumField(default=0)
 
     is_active = models.BooleanField(default=True)
 
     objects: CompetitionManager = CompetitionManager()
 
     def __str__(self):
-        return f"{self.title}"
+        return f"{self.user_profile.username} - {self.title}"
 
     def can_be_shown(self):
         return self.start_at >= timezone.now()
 
-class UserCompetition(BaseModel):
+class UserCompetition(models.Model):
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     is_winner = models.BooleanField(default=False)
-    amount_won = models.PositiveBigIntegerField(default=0)
+    amount_won = BigNumField(default=0)
 
+    class Meta:
+        unique_together = ("user_profile", "competition")
 
     def __str__(self):
-        return self.competition.title
+        return f"{self.user_profile.username} - {self.competition.title}"
 
 
 
@@ -81,7 +104,7 @@ class QuestionManager(models.Manager):
         return self.filter(competition__start_at__gte=timezone.now())
 
 
-class Question(BaseModel):
+class Question(models.Model):
     competition = models.ForeignKey(
         Competition, on_delete=models.CASCADE, related_name="questions"
     )
@@ -89,7 +112,6 @@ class Question(BaseModel):
         null=False, blank=False, validators=[MinValueValidator(1)]
     )
     text = models.TextField()
-    users_answer: models.QuerySet
 
     @property
     def can_be_shown(self):
@@ -104,22 +126,23 @@ class Question(BaseModel):
     def __str__(self):
         return f"{self.competition.title} - {self.number} - {self.text}"
 
-    class Meta(BaseModel.Meta):
+    class Meta:
         unique_together = ("competition", "number")
 
 
-class Choice(BaseModel):
+class Choice(models.Model):
     question = models.ForeignKey(
         Question, on_delete=models.CASCADE, related_name="choices"
     )
     text = models.CharField(max_length=255)
     is_correct = models.BooleanField(default=False)
+    is_hinted_choice = models.BooleanField(default=False)
 
     def __str__(self):
         return self.text
 
 
-class UserAnswer(BaseModel):
+class UserAnswer(models.Model):
     user_competition = models.ForeignKey(
         UserCompetition,
         on_delete=models.CASCADE,
@@ -147,5 +170,6 @@ class UserAnswer(BaseModel):
 
     def __str__(self):
         return (
-            f"{self.user_competition.competition.title}  - {self.question.number}"
+            f"{self.user_competition.user_profile.username} "
+            f"- {self.user_competition.competition.title}  - {self.question.number}"
         )

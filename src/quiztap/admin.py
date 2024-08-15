@@ -84,10 +84,6 @@ class UserCompetitionAdmin(admin.ModelAdmin):
 
     search_fields = ("user_profile", "competition", "pk")
 
-    @admin.display(ordering="user_profile__username")
-    def username(self, obj):
-        return obj.user_profile.username
-
     @admin.display(ordering="competition__title")
     def competition_title(self, obj):
         return obj.competition.title
