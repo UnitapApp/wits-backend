@@ -1,28 +1,18 @@
 from django.contrib import admin
 
-from quiztap.models import Choice, Competition, Question, UserAnswer, UserCompetition
+from quiz.models import Choice, Competition, Question, UserAnswer, UserCompetition
 
 
 class CompetitionAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
         "title",
-        "username",
         "details",
-        "chain_name",
         "token",
     )
 
     search_fields = ("user_profile", "pk")
     list_filter = ()
-
-    @admin.display(ordering="chain__chain_name")
-    def chain_name(self, obj):
-        return obj.chain.chain_name
-
-    @admin.display(ordering="user_profile__username")
-    def username(self, obj):
-        return obj.user_profile.username
 
 
 class ChoiceInline(admin.TabularInline):
@@ -56,7 +46,6 @@ class ChoiceAdmin(admin.ModelAdmin):
 class UserAnswerAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
-        "username",
         "competition_title",
         "question_number",
     )
@@ -66,10 +55,6 @@ class UserAnswerAdmin(admin.ModelAdmin):
     def question_number(self, obj):
         return obj.question.number
 
-    @admin.display(ordering="user_competition__user_profile__username")
-    def username(self, obj):
-        return obj.user_competition.user_profile.username
-
     @admin.display(ordering="user_competition__competition__title")
     def competition_title(self, obj):
         return obj.user_competition.competition.title
@@ -78,7 +63,6 @@ class UserAnswerAdmin(admin.ModelAdmin):
 class UserCompetitionAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
-        "username",
         "competition_title",
     )
 

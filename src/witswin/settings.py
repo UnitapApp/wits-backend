@@ -9,43 +9,46 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-import dj_database_url
 import os
 
 from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(find_dotenv())
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2+aj%(1gmczhxrb+oxf2dc827+ex+sn=)2*i&x7m99)#=1)3yq'
+SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-2+aj%(1gmczhxrb+oxf2dc827+ex+sn=)2*i&x7m99)#=1)3yq') 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(os.environ.get("DEBUG"))
 
 
 REDIS_HOST = os.environ.get("REDIS_HOST")
 REDIS_PORT = os.environ.get("REDIS_PORT")
+UNITAP_API_HOST = os.environ.get("UNITAP_API_HOST")
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'daphne',
-    'quiztap.apps.QuiztapConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'quiz.apps.QuizConfig',
+    'authentication.apps.AuthenticationConfig',
 ]
 
 
@@ -82,7 +85,25 @@ ASGI_APPLICATION = "witswin.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-DATABASES = {"default": dj_database_url.config(conn_max_age=600)}
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": os.environ.get("POSTGRES_DB", "wits"),
+        "USER": os.environ.get("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+        "HOST": os.environ.get("DATABASE_HOST", "database"),
+        "PORT": os.environ.get("DATABASE_PORT", "5432"),
+        "OPTIONS": {
+            "connect_timeout": 500,
+        },
+    },
+    "test": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    },
+}
+
 
 
 # Password validation

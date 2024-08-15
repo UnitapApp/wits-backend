@@ -4,8 +4,8 @@ from channels.layers import get_channel_layer
 from asgiref.testing import ApplicationCommunicator
 from django.utils import timezone
 from witswin.asgi import application 
-from quiztap.models import Competition, Question
-from quiztap.serializers import CompetitionSerializer, QuestionSerializer
+from quiz.models import Competition, Question
+from quiz.serializers import CompetitionSerializer, QuestionSerializer
 import json
 
 class QuizConsumerTestCase(TestCase):

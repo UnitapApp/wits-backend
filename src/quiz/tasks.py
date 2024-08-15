@@ -1,43 +1,53 @@
-# import logging
-# from datetime import timedelta
-# from decimal import Decimal
+import logging
+from datetime import timedelta
+from decimal import Decimal
 
-# from celery import shared_task
-# from django.core.cache import cache
-# from django.utils import timezone
+from celery import shared_task
+from django.core.cache import cache
+from django.utils import timezone
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from core.utils import memcache_lock
+from quiz.constants import (
+    ANSWER_TIME_SECOND,
+    REGISTER_COMPETITION_TASK_PERIOD_SECONDS,
+    REST_BETWEEN_EACH_QUESTION_SECOND,
+)
+from quiz.models import Competition, Question, UserCompetition
+from quiz.serializers import QuestionSerializer
 
-# from core.utils import memcache_lock
-# from quiztap.constants import (
-#     ANSWER_TIME_SECOND,
-#     REGISTER_COMPETITION_TASK_PERIOD_SECONDS,
-#     REST_BETWEEN_EACH_QUESTION_SECOND,
-# )
-# from quiztap.models import Competition, Question, UserCompetition
+
+@shared_task()
+def setup_competition_to_start(competition_pk):
+    try:
+        competition = Competition.objects.get(
+            pk=competition_pk
+        )
+    except Competition.DoesNotExist:
+        logging.warning(f"Competition with pk {competition_pk} not exists.")
+        return
+
+    question = competition.questions.order_by("number").first()
+
+    if not question:
+        logging.warning(f"No questions found for competition {competition_pk}.")
+        return
+
+    channel_layer = get_channel_layer()
 
 
-# @shared_task()
-# def setup_competition_to_start(competition_pk):
-#     try:
-#         competition = Competition.objects.get(
-#             pk=competition_pk, status=Competition.Status.NOT_STARTED
-#         )
-#     except Competition.DoesNotExist:
-#         logging.warning(f"Competition with pk {competition_pk} not exists.")
-#         return
+    async_to_sync(channel_layer.group_send)( # type: ignore
+        f'quiz_{competition_pk}',
+        {
+            "type": "sendQuestion",
+            "data": QuestionSerializer(instance=question).data
+        }
+    )
 
-#     question = competition.questions.order_by("number").first()
-#     competition.status = competition.Status.IN_PROGRESS
-#     question.can_be_shown = True
-#     competition.save(update_fields=("status",))
-#     question.save(update_fields=("can_be_shown",))
-#     user_competition_count = competition.participants.count()
-#     cache.set(
-#         f"comp_{competition_pk}_total_participants_count", user_competition_count, 360
-#     )
-#     process_competition_answers.apply_async(
-#         (competition_pk, question.pk),
-#         eta=competition.start_at + timedelta(seconds=ANSWER_TIME_SECOND),
-#     )
+    user_competition_count = competition.participants.count()
+    cache.set(
+        f"comp_{competition_pk}_total_participants_count", user_competition_count, 360
+    )
 
 
 # @shared_task()
@@ -70,9 +80,7 @@
 # @shared_task()
 # def process_competition_answers(competition_pk, ques_pk):
 #     try:
-#         competition = Competition.objects.get(
-#             pk=competition_pk, status=Competition.Status.IN_PROGRESS
-#         )
+#         competition = Competition.objects.get(pk=competition_pk)
 #         current_question = Question.objects.prefetch_related("users_answer").get(
 #             pk=ques_pk
 #         )

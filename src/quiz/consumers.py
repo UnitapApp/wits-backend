@@ -1,17 +1,20 @@
 import json
 import math
-from channels.generic.websocket import AsyncWebsocketConsumer
+from typing import Any
+from channels.generic.websocket import AsyncWebsocketConsumer, AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.core.serializers.json import DjangoJSONEncoder
 
-from quiztap.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
-from quiztap.serializers import CompetitionSerializer, QuestionSerializer
+from quiz.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
+from quiz.serializers import CompetitionSerializer, QuestionSerializer
 
 from .models import Competition, Question, Choice, UserCompetition, UserAnswer
 
+import json
 
-class QuizConsumer(AsyncWebsocketConsumer):
+
+class QuizConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def get_competition(self):
         return Competition.objects.select_related('questions').get(pk=self.competition_id)
@@ -40,11 +43,8 @@ class QuizConsumer(AsyncWebsocketConsumer):
 
         return { "error": "", "data": { "state": state, "question": question } }
         
-    def get_competition_stats(self) -> dict:
+    def get_competition_stats(self) -> Any:
         return CompetitionSerializer(instance=self.competition).data
-
-    async def send_json(self, data):
-        await self.send(json.dumps(data, cls=DjangoJSONEncoder))
 
     async def connect(self):
         self.competition_id = self.scope['url_route']['kwargs']['competition_id']
@@ -62,6 +62,7 @@ class QuizConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
+        await self.close()
         if not self.channel_layer:
             return
         

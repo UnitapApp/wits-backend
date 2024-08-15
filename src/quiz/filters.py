@@ -1,7 +1,7 @@
 from rest_framework import filters
 from rest_framework.generics import get_object_or_404
 
-from quiztap.models import Competition
+from quiz.models import Competition
 
 
 class CompetitionFilter(filters.BaseFilterBackend):

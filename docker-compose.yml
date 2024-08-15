@@ -1,7 +1,35 @@
+name: "wits"
+
 services:
-  backend:
+  # beat:
+  #   restart: always
+  #   build: .
+  #   command: celery -A witswin beat -S redbeat.RedBeatScheduler --loglevel=info
+  #   volumes:
+  #     - ./src/:/usr/src/app
+  #   depends_on:
+  #     - app
+  #     - redis
+
+  #   networks:
+  #     - base
+
+  # celery:
+  #   build: .
+  #   restart: always
+  #   command: celery -A witswin worker --loglevel=info
+  #   volumes:
+  #     - ./src/:/usr/src/app
+  #   depends_on:
+  #     - app
+  #     - redis
+
+  #   networks:
+  #     - base
+
+  app:
     build: .
-    command: python manage.py runserver
+    command: python manage.py runserver 0.0.0.0:4444
     environment:
       - FIELD_KEY=${FIELD_KEY}
       - SECRET_KEY=${SECRET_KEY}
@@ -18,32 +46,43 @@ services:
       - redis
     volumes:
       - ./src/:/usr/src/app
-
+    networks:
+      - base
+    
   database:
     image: postgres:14.1-alpine
-    restart: always
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - db:/var/lib/postgresql/data
+    networks:
+      - base
+    ports:
+      - 5432:5432
 
   redis:
-    platform: linux/amd64
     image: redis:6.2-alpine
-    restart: always
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - cache:/data
+    networks:
+      - base
 
-  memcached:
-    container_name: memcached
-    image: memcached:latest
-    ports:
-        - "11211:11211"
+  # memcached:
+  #   container_name: memcached
+  #   image: memcached:latest
+  #   ports:
+  #       - "11211:11211"
 volumes:
   db:
     driver: local
   cache:
     driver: local
+
+
+networks:
+  base:
+    name: base
+    external: true

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from quiztap.models import Choice, Competition, Question, UserAnswer, UserCompetition
+from quiz.models import Choice, Competition, Question, UserAnswer, UserCompetition
 
 
 class SmallQuestionSerializer(serializers.ModelSerializer):
