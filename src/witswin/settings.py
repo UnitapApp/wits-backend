@@ -33,6 +33,12 @@ REDIS_HOST = os.environ.get("REDIS_HOST")
 REDIS_PORT = os.environ.get("REDIS_PORT")
 UNITAP_API_HOST = os.environ.get("UNITAP_API_HOST")
 
+CLOUDFLARE_IMAGES_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+CLOUDFLARE_IMAGES_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+CLOUDFLARE_IMAGES_ACCOUNT_HASH = os.environ.get("CLOUDFLARE_ACCOUNT_HASH")
+IMAGE_DELIVERY_URL = os.environ.get("IMAGE_DELIVERY_URL")
+
+
 
 ALLOWED_HOSTS = ["*"]
 
@@ -55,8 +61,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'djangorestframework_camel_case.middleware.CamelCaseMiddleWare',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -80,7 +88,6 @@ TEMPLATES = [
     },
 ]
 
-ASGI_APPLICATION = "witswin.asgi.application"
 
 
 # Database
@@ -148,8 +155,6 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-
-
 ASGI_APPLICATION = "witswin.asgi.application"
 
 
@@ -160,4 +165,26 @@ CHANNEL_LAYERS = {
             "hosts": [(REDIS_HOST, REDIS_PORT)],
         },
     },
+}
+
+CORS_ALLOW_ALL_ORIGINS = True
+APPEND_SLASH = True
+
+
+
+
+# ------- Rest framework
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_RENDERER_CLASSES": (
+        "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+        "djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer",
+    ),
+    "DEFAULT_PARSER_CLASSES": (
+        "djangorestframework_camel_case.parser.CamelCaseFormParser",
+        "djangorestframework_camel_case.parser.CamelCaseMultiPartParser",
+        "djangorestframework_camel_case.parser.CamelCaseJSONParser",
+    ),
 }

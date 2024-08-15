@@ -28,6 +28,8 @@ class CompetitionView(RetrieveAPIView):
     serializer_class = CompetitionSerializer
 
 
+
+
 class QuestionView(RetrieveAPIView):
     http_method_names = ["get"]
     serializer_class = QuestionSerializer
@@ -36,15 +38,17 @@ class QuestionView(RetrieveAPIView):
 
 
 class EnrollInCompetitionView(ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
     filter_backends = [CompetitionFilter]
-    pagination_class = StandardResultsSetPagination
     queryset = UserCompetition.objects.all()
     serializer_class = UserCompetitionSerializer
 
     def perform_create(self, serializer):
         user = resolve_user_from_request(self.request)
         serializer.save(user_profile=user)
+
+    def get_queryset(self):
+        return self.queryset.filter(user_profile=resolve_user_from_request(self.request))
 
 
 class UserAnswerView(ListCreateAPIView):

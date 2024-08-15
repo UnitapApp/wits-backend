@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from quiz.models import Choice, Competition, Question, UserAnswer, UserCompetition
+from quiz.models import Choice, Competition, Question, UserAnswer, UserCompetition, Sponsor
 
 
 class CompetitionAdmin(admin.ModelAdmin):
@@ -78,3 +78,4 @@ admin.site.register(Question, QuestionAdmin)
 admin.site.register(Choice, ChoiceAdmin)
 admin.site.register(UserAnswer, UserAnswerAdmin)
 admin.site.register(UserCompetition, UserCompetitionAdmin)
+admin.site.register(Sponsor)

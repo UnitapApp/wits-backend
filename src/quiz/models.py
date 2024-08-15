@@ -15,6 +15,10 @@ class Sponsor(models.Model):
     image = CloudflareImagesField(blank=True, null=True, variant="public")
 
 
+    def __str__(self) -> str:
+        return self.name
+
+
 class CompetitionManager(models.Manager):
     def with_question_count(self):
         return self.annotate(question_count=Count('questions'))
@@ -49,12 +53,12 @@ class CompetitionManager(models.Manager):
 
 class Competition(models.Model):
     title = models.CharField(max_length=255)
-    sponsor = models.ManyToManyField(
+    sponsors = models.ManyToManyField(
         Sponsor,
         related_name="competitions",
         blank=True,
     )
-    user_profile = models.PositiveBigIntegerField()
+    user_profile = models.ForeignKey(ApiUserProfile, on_delete=models.CASCADE, blank=True)
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     start_at = models.DateTimeField(null=False, blank=False)
@@ -66,8 +70,8 @@ class Competition(models.Model):
     twitter_url = models.URLField(max_length=255, null=True, blank=True)
     email_url = models.EmailField(max_length=255)
     telegram_url = models.URLField(max_length=255, null=True, blank=True)
-    image_url = models.URLField(max_length=255, null=True, blank=True)
-    token_image_url = models.URLField(max_length=255, null=True, blank=True)
+    token_image = CloudflareImagesField(blank=True, null=True, variant="public")
+    image = CloudflareImagesField(blank=True, null=True, variant="public")
 
     participants = models.ManyToManyField(
         ApiUserProfile, through="UserCompetition", related_name="participated_competitions"

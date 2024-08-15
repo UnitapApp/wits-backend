@@ -43,7 +43,6 @@ class CloudflareImagesStorage(Storage):
         """
         new_name = self.generate_filename(name)
         content.name = new_name
-        print("UPLOAD 1")
         return self.service.upload(content)
 
     def get_valid_name(self, name):

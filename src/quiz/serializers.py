@@ -81,7 +81,7 @@ class CompetitionField(serializers.PrimaryKeyRelatedField):
         if self.pk_field is not None:
             return self.pk_field.to_representation(pk)
         try:
-            item = Competition.objects.started.get(pk=pk)
+            item = Competition.objects.get(pk=pk)
             serializer = CompetitionSerializer(item)
             return serializer.data
         except Competition.DoesNotExist:
