@@ -87,6 +87,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         self.competition_id = self.scope["url_route"]["kwargs"]["competition_id"]
+
         self.competition_group_name = f"quiz_{self.competition_id}"
         self.competition: Competition = await self.get_competition()
 
@@ -98,6 +99,10 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         )
 
         await self.accept()
+        headers = self.scope["headers"]
+        token = headers[b"authorization"].decode("utf-8")
+
+        self.user_profile = await resolve_user_from_token(token)
 
     async def disconnect(self, close_code):
         await self.close()
@@ -153,7 +158,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         question = Question.objects.can_be_shown.get(pk=question_id)
         selected_choice = Choice.objects.get(pk=selected_choice_id)
         user_competition = UserCompetition.objects.get(
-            user_profile=resolve_user_from_token(token),
+            user_profile=self.user_profile,
             competition_id=self.competition_id,
         )
 
