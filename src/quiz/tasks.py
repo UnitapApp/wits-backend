@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 from decimal import Decimal
+import time
 
 from celery import shared_task
 from django.core.cache import cache
@@ -16,16 +17,54 @@ from quiz.constants import (
 from quiz.models import Competition, Question, UserCompetition
 from quiz.serializers import QuestionSerializer
 
+import math
+
+
+def handle_quiz_end(competition: Competition):
+    pass
+
+
+def evaluate_state(competition: Competition):
+    time_scale = timezone.now() - competition.start_at
+
+    question_state = (
+        math.floor(
+            time_scale.seconds
+            / (REST_BETWEEN_EACH_QUESTION_SECOND + ANSWER_TIME_SECOND)
+        )
+        + 1
+    )
+
+    if question_state - 1 > competition.questions:
+        handle_quiz_end(competition)
+        return -1
+
+    question = Question.objects.get(competition=competition, number=question_state)
+
+    async_to_sync(channel_layer.group_send)(  # type: ignore
+        f"quiz_{competition.pk}",
+        {"type": "send_question", "data": QuestionSerializer(instance=question).data},
+    )
+
+    # calculate the amount to be sleep
+    return ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND
+
 
 @shared_task()
 def setup_competition_to_start(competition_pk):
     try:
-        competition = Competition.objects.get(
-            pk=competition_pk
-        )
+        competition = Competition.objects.get(pk=competition_pk)
     except Competition.DoesNotExist:
         logging.warning(f"Competition with pk {competition_pk} not exists.")
         return
+
+    state = "IDLE"
+
+    rest_still = competition.start_at - timezone.now()
+
+    while state != "FINISHED":
+        time.sleep(rest_still)
+        evaluate_state(competition)
 
     question = competition.questions.order_by("number").first()
 
@@ -35,13 +74,9 @@ def setup_competition_to_start(competition_pk):
 
     channel_layer = get_channel_layer()
 
-
-    async_to_sync(channel_layer.group_send)( # type: ignore
-        f'quiz_{competition_pk}',
-        {
-            "type": "sendQuestion",
-            "data": QuestionSerializer(instance=question).data
-        }
+    async_to_sync(channel_layer.group_send)(  # type: ignore
+        f"quiz_{competition_pk}",
+        {"type": "send_question", "data": QuestionSerializer(instance=question).data},
     )
 
     user_competition_count = competition.participants.count()

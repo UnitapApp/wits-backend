@@ -1,31 +1,31 @@
 name: "wits"
 
 services:
-  # beat:
-  #   restart: always
-  #   build: .
-  #   command: celery -A witswin beat -S redbeat.RedBeatScheduler --loglevel=info
-  #   volumes:
-  #     - ./src/:/usr/src/app
-  #   depends_on:
-  #     - app
-  #     - redis
+  beat:
+    restart: always
+    build: .
+    command: celery -A witswin beat -S redbeat.RedBeatScheduler --loglevel=info
+    volumes:
+      - ./src/:/usr/src/app
+    depends_on:
+      - app
+      - redis
 
-  #   networks:
-  #     - base
+    networks:
+      - base
 
-  # celery:
-  #   build: .
-  #   restart: always
-  #   command: celery -A witswin worker --loglevel=info
-  #   volumes:
-  #     - ./src/:/usr/src/app
-  #   depends_on:
-  #     - app
-  #     - redis
+  celery:
+    build: .
+    restart: always
+    command: celery -A witswin worker --loglevel=info
+    volumes:
+      - ./src/:/usr/src/app
+    depends_on:
+      - app
+      - redis
 
-  #   networks:
-  #     - base
+    networks:
+      - base
 
   app:
     build: .

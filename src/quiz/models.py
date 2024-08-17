@@ -1,4 +1,5 @@
 from datetime import timedelta
+import math
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -14,39 +15,44 @@ class Sponsor(models.Model):
     description = models.TextField(blank=True, null=True)
     image = CloudflareImagesField(blank=True, null=True, variant="public")
 
-
     def __str__(self) -> str:
         return self.name
 
 
 class CompetitionManager(models.Manager):
     def with_question_count(self):
-        return self.annotate(question_count=Count('questions'))
+        return self.annotate(question_count=Count("questions"))
 
     @property
     def not_started(self):
         return self.filter(start_at__gt=timezone.now())
-    
+
     @property
     def finished(self):
         return self.with_question_count().filter(
-            start_at__lt=timezone.now() - timezone.timedelta(
-                seconds=F("questions__count") * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+            start_at__lt=timezone.now()
+            - timezone.timedelta(
+                seconds=F("questions__count")
+                * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
             )
         )
-    
+
     @property
     def started(self):
         return self.filter(start_at__lte=timezone.now())
-    
+
     @property
     def in_progress(self):
         # Competitions that have started but not yet finished
-        return self.with_question_count().filter(
-            start_at__lte=timezone.now()
-        ).filter(
-            start_at__gt=timezone.now() - timezone.timedelta(
-                seconds=F("question_count") * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+        return (
+            self.with_question_count()
+            .filter(start_at__lte=timezone.now())
+            .filter(
+                start_at__gt=timezone.now()
+                - timezone.timedelta(
+                    seconds=F("question_count")
+                    * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+                )
             )
         )
 
@@ -58,7 +64,9 @@ class Competition(models.Model):
         related_name="competitions",
         blank=True,
     )
-    user_profile = models.ForeignKey(ApiUserProfile, on_delete=models.CASCADE, blank=True)
+    user_profile = models.ForeignKey(
+        ApiUserProfile, on_delete=models.CASCADE, blank=True
+    )
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     start_at = models.DateTimeField(null=False, blank=False)
@@ -74,7 +82,9 @@ class Competition(models.Model):
     image = CloudflareImagesField(blank=True, null=True, variant="public")
 
     participants = models.ManyToManyField(
-        ApiUserProfile, through="UserCompetition", related_name="participated_competitions"
+        ApiUserProfile,
+        through="UserCompetition",
+        related_name="participated_competitions",
     )
     winner_count = models.IntegerField(default=0)
     amount_won = BigNumField(default=0)
@@ -86,14 +96,41 @@ class Competition(models.Model):
 
     def __str__(self):
         return f"{self.user_profile} - {self.title}"
-    
+
     @property
     def is_in_progress(self):
-        return self.can_be_shown and (self.start_at + timedelta(seconds=(self.questions.count() * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND) - REST_BETWEEN_EACH_QUESTION_SECOND)) >= timezone.now())
+        return self.can_be_shown and (
+            self.start_at
+            + timedelta(
+                seconds=(
+                    self.questions.count()
+                    * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+                    - REST_BETWEEN_EACH_QUESTION_SECOND
+                )
+            )
+            >= timezone.now()
+        )
 
     @property
     def can_be_shown(self):
         return self.start_at <= timezone.now()
+
+
+class UserCompetitionManager(models.Manager):
+    def is_eligible(self, competition: Competition):
+        if not competition.is_active:
+            return self.none()
+
+        state = math.floor(
+            (timezone.now() - competition.start_at)
+            / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+        )
+
+        return self.annotate().filter(
+            competition=competition,
+            user_answer__selected_choice__is_correct=True,
+            user_answer__gte=state,
+        )
 
 
 class UserCompetition(models.Model):
@@ -112,7 +149,6 @@ class UserCompetition(models.Model):
         return f"{self.user_profile} - {self.competition.title}"
 
 
-
 class QuestionManager(models.Manager):
     @property
     def can_be_shown(self):
@@ -128,16 +164,30 @@ class Question(models.Model):
     )
     text = models.TextField()
 
-
     users_answer: models.QuerySet
 
     @property
     def can_be_shown(self):
-        return self.competition.start_at + timezone.timedelta(seconds=(self.number - 1) * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)) <= timezone.now()
-    
+        return (
+            self.competition.start_at
+            + timezone.timedelta(
+                seconds=(self.number - 1)
+                * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+            )
+            <= timezone.now()
+        )
+
     @property
     def answer_can_be_shown(self):
-        return self.competition.start_at + timezone.timedelta(seconds=(self.number - 1) * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND) + ANSWER_TIME_SECOND) <= timezone.now()
+        return (
+            self.competition.start_at
+            + timezone.timedelta(
+                seconds=(self.number - 1)
+                * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+                + ANSWER_TIME_SECOND
+            )
+            <= timezone.now()
+        )
 
     objects: QuestionManager = QuestionManager()
 

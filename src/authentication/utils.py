@@ -5,11 +5,20 @@ from authentication.models import ApiUserProfile
 
 
 def resolve_user_from_request(request: HttpRequest):
-  token = request.headers.get("Authorization")
-  
-  if not token:
-    raise PermissionDenied()
-  
-  user, created = ApiUserProfile.get_or_create_user(token)
+    token = request.headers.get("Authorization")
 
-  return user
+    if not token:
+        raise PermissionDenied()
+
+    user, created = ApiUserProfile.get_or_create_user(token)
+
+    return user
+
+
+def resolve_user_from_token(token: str):
+    if not token:
+        raise Exception("No authentication token has been provided")
+
+    user, created = ApiUserProfile.get_or_create_user(token)
+
+    return user

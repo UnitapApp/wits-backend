@@ -1,7 +1,9 @@
+import math
 from django.core.cache import cache
 from django.utils import timezone
 
 from authentication.models import ApiUserProfile
+from quiz.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
 from quiz.models import Competition, UserCompetition
 
 
@@ -14,12 +16,26 @@ def is_user_eligible_to_participate(
         )
     except UserCompetition.DoesNotExist:
         return False
-    
 
-    has_wrong_answer = user_competition.users_answer.filter(selected_choice__is_correct=False).exists()
+    has_wrong_answer = user_competition.users_answer.filter(
+        selected_choice__is_correct=False
+    ).exists()
 
-    return (
+    if (
         competition.is_active
         and competition.is_in_progress
-        and (not has_wrong_answer)
+        and (not has_wrong_answer) is False
+    ):
+        return False
+
+    question_number = user_competition.users_answer.last().question.number
+
+    state = math.floor(
+        (timezone.now() - competition.start_at)
+        / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
     )
+
+    if state + 1 > question_number:
+        return False
+
+    return True
