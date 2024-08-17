@@ -64,25 +64,29 @@ def setup_competition_to_start(competition_pk):
 
     while state != "FINISHED":
         time.sleep(rest_still)
-        evaluate_state(competition)
+        rest_still = evaluate_state(competition)
 
-    question = competition.questions.order_by("number").first()
+        if rest_still == -1:
+            state = "FINISHED"
+            break
 
-    if not question:
-        logging.warning(f"No questions found for competition {competition_pk}.")
-        return
+    # question = competition.questions.order_by("number").first()
 
-    channel_layer = get_channel_layer()
+    # if not question:
+    #     logging.warning(f"No questions found for competition {competition_pk}.")
+    #     return
 
-    async_to_sync(channel_layer.group_send)(  # type: ignore
-        f"quiz_{competition_pk}",
-        {"type": "send_question", "data": QuestionSerializer(instance=question).data},
-    )
+    # channel_layer = get_channel_layer()
 
-    user_competition_count = competition.participants.count()
-    cache.set(
-        f"comp_{competition_pk}_total_participants_count", user_competition_count, 360
-    )
+    # async_to_sync(channel_layer.group_send)(  # type: ignore
+    #     f"quiz_{competition_pk}",
+    #     {"type": "send_question", "data": QuestionSerializer(instance=question).data},
+    # )
+
+    # user_competition_count = competition.participants.count()
+    # cache.set(
+    #     f"comp_{competition_pk}_total_participants_count", user_competition_count, 360
+    # )
 
 
 # @shared_task()
