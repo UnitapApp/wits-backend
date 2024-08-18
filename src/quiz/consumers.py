@@ -22,7 +22,7 @@ import json
 class QuizConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def get_competition(self):
-        return Competition.objects.select_related("questions").get(
+        return Competition.objects.get(
             pk=self.competition_id
         )
 

@@ -1,3 +1,6 @@
 from django.contrib import admin
+from authentication.models import ApiUserProfile
 
-# Register your models here.
+
+
+admin.site.register(ApiUserProfile)

@@ -1,11 +1,12 @@
 from celery import current_app
 from django.utils import timezone
 from django.db.models.signals import post_save
+from django.dispatch import receiver
 from quiz.models import Competition
 from quiz.tasks import setup_competition_to_start
 
 
-@post_save(sender=Competition)
+@receiver(post_save, sender=Competition)
 def trigger_competition_starter_task(sender, instance: Competition, created, **kwargs):
 
     start_time = instance.start_at

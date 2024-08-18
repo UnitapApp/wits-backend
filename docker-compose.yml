@@ -5,6 +5,10 @@ services:
     restart: always
     build: .
     command: celery -A witswin beat -S redbeat.RedBeatScheduler --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      
     volumes:
       - ./src/:/usr/src/app
     depends_on:
@@ -24,6 +28,10 @@ services:
       - app
       - redis
 
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
     networks:
       - base
 
@@ -37,6 +45,8 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
       - MEMCACHEDCLOUD_SERVERS=memcached:11211
+      - REDIS_PORT=6379
+      - REDIS_HOST=redis
     expose:
       - 4444
     ports:
@@ -70,11 +80,8 @@ services:
     networks:
       - base
 
-  # memcached:
-  #   container_name: memcached
-  #   image: memcached:latest
-  #   ports:
-  #       - "11211:11211"
+
+
 volumes:
   db:
     driver: local
@@ -84,6 +91,6 @@ volumes:
 
 networks:
   base:
-    name: base
+    # name: base
     external: true
     driver: bridge

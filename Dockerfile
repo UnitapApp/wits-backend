@@ -33,4 +33,4 @@ RUN pip install -r requirements.txt
 COPY ./src .
 
 
-COPY .env .
+COPY ./.env .

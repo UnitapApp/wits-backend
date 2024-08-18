@@ -38,6 +38,9 @@ CLOUDFLARE_IMAGES_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_IMAGES_ACCOUNT_HASH = os.environ.get("CLOUDFLARE_ACCOUNT_HASH")
 IMAGE_DELIVERY_URL = os.environ.get("IMAGE_DELIVERY_URL")
 
+REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379")
+
+
 
 
 ALLOWED_HOSTS = ["*"]
@@ -188,3 +191,6 @@ REST_FRAMEWORK = {
         "djangorestframework_camel_case.parser.CamelCaseJSONParser",
     ),
 }
+
+
+CELERY_BROKER_URL = REDIS_URL
