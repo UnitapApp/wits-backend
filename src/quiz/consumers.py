@@ -22,9 +22,7 @@ import json
 class QuizConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def get_competition(self):
-        return Competition.objects.get(
-            pk=self.competition_id
-        )
+        return Competition.objects.get(pk=self.competition_id)
 
     async def send_question(self, event):
         question_data = event["data"]
@@ -85,6 +83,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     def get_competition_stats(self) -> Any:
         return CompetitionSerializer(instance=self.competition).data
 
+    async def login_user(self, token: str):
+        self.user_profile = await resolve_user_from_token(token)
+
     async def connect(self):
         self.competition_id = self.scope["url_route"]["kwargs"]["competition_id"]
 
@@ -99,10 +100,8 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         )
 
         await self.accept()
-        headers = self.scope["headers"]
-        token = headers[b"authorization"].decode("utf-8")
 
-        self.user_profile = await resolve_user_from_token(token)
+        self.user_profile = None
 
     async def disconnect(self, close_code):
         await self.close()
@@ -119,6 +118,15 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
         if command == "PING":
             await self.send("PONG")
+
+        if command == "LOGIN":
+            await self.login_user(data["args"]["token"])
+
+        if not self.user_profile:
+            return
+
+        if command == "GET_CURRENT_QUESTION":
+            await self.send_json(await self.get_current_question())
 
         if command == "GET_COMPETITION":
             await self.send_json(self.get_competition_stats())
