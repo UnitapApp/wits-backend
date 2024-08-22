@@ -1,6 +1,6 @@
-import logging
 from datetime import timedelta
 from decimal import Decimal
+import json
 import time
 
 from celery import shared_task
@@ -16,15 +16,19 @@ from quiz.constants import (
 )
 from quiz.models import Competition, Question, UserCompetition
 from quiz.serializers import QuestionSerializer
-
+import logging
 import math
+
+
+
+logger = logging.getLogger(__name__)
 
 
 def handle_quiz_end(competition: Competition):
     pass
 
 
-def evaluate_state(competition: Competition):
+def evaluate_state(competition: Competition, channel_layer):
     time_scale = timezone.now() - competition.start_at
 
     question_state = (
@@ -34,16 +38,22 @@ def evaluate_state(competition: Competition):
         )
         + 1
     )
+    logger.warning(f"sending broadcast question {question_state}.")
 
-    if question_state - 1 > competition.questions:
+    if question_state - 1 > competition.questions.count():
         handle_quiz_end(competition)
+        logger.warning(f"no more questions remaining, broadcast quiz finished.")
+        async_to_sync(channel_layer.group_send)(  # type: ignore
+            f"quiz_{competition.pk}",
+            {"type": "finish_quiz", "data": {  }},
+        )
         return -1
 
     question = Question.objects.get(competition=competition, number=question_state)
 
     async_to_sync(channel_layer.group_send)(  # type: ignore
         f"quiz_{competition.pk}",
-        {"type": "send_question", "data": QuestionSerializer(instance=question).data},
+        {"type": "send_question", "data": json.dumps(QuestionSerializer(instance=question).data, cls=DjangoJSONEncoder)},
     )
 
     # calculate the amount to be sleep
@@ -52,19 +62,22 @@ def evaluate_state(competition: Competition):
 
 @shared_task()
 def setup_competition_to_start(competition_pk):
+    channel_layer = get_channel_layer()
+
     try:
         competition = Competition.objects.get(pk=competition_pk)
     except Competition.DoesNotExist:
-        logging.warning(f"Competition with pk {competition_pk} not exists.")
+        logger.warning(f"Competition with pk {competition_pk} not exists.")
         return
 
     state = "IDLE"
 
-    rest_still = competition.start_at - timezone.now()
+    rest_still = (competition.start_at - timezone.now()).seconds
+    logger.warning(f"Resting {rest_still} seconds till the quiz begins and broadcast the questions.")
 
     while state != "FINISHED":
         time.sleep(rest_still)
-        rest_still = evaluate_state(competition)
+        rest_still = evaluate_state(competition, channel_layer)
 
         if rest_still == -1:
             state = "FINISHED"
@@ -76,7 +89,6 @@ def setup_competition_to_start(competition_pk):
     #     logging.warning(f"No questions found for competition {competition_pk}.")
     #     return
 
-    # channel_layer = get_channel_layer()
 
     # async_to_sync(channel_layer.group_send)(  # type: ignore
     #     f"quiz_{competition_pk}",

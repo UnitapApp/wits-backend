@@ -15,7 +15,7 @@ def trigger_competition_starter_task(sender, instance: Competition, created, **k
         return
 
     # This assumes the task is scheduled with a unique name using the competition ID.
-    current_app.control.revoke(f"start_competition_{instance.pk}", terminate=True)
+    # current_app.control.revoke(f"start_competition_{instance.pk}", terminate=True)
 
     setup_competition_to_start.apply_async(
         args=[instance.pk],

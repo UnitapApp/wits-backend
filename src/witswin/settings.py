@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'quiz.apps.QuizConfig',
+    'django_celery_results',
     'authentication.apps.AuthenticationConfig',
 ]
 
@@ -194,3 +195,6 @@ REST_FRAMEWORK = {
 
 
 CELERY_BROKER_URL = REDIS_URL
+
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'default'

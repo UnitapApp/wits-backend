@@ -20,6 +20,16 @@ import json
 
 
 class QuizConsumer(AsyncJsonWebsocketConsumer):
+    async def send_json(self, content, close=False):
+        """
+        Encode the given content as JSON and send it to the client.
+        """
+        await super().send(text_data=await self.encode_json(content), close=close)
+
+    @classmethod
+    async def encode_json(cls, content):
+        return json.dumps(content, cls=DjangoJSONEncoder)
+    
     @database_sync_to_async
     def get_competition(self):
         return Competition.objects.get(pk=self.competition_id)
@@ -27,9 +37,18 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     async def send_question(self, event):
         question_data = event["data"]
 
-        await self.send(
-            text_data=json.dumps({"question": question_data, "type": "new_question"})
+        await self.send_json(
+            {"question": question_data, "type": "new_question"}
         )
+        
+    async def finish_quiz(self, event):
+        question_data = event["data"]
+
+        await self.send_json(
+            {"stats": question_data, "event": "quiz_finish"}
+        )
+
+        await self.disconnect(0)
 
     @database_sync_to_async
     def get_question(self, index: int):
@@ -57,6 +76,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             "users_participating": users_participating,
             "prize_to_win": prize_to_win / users_participating,
             "total_participants_count": self.competition.participants.count(),
+            "questions_count": self.competition.questions.count()
         }
 
     async def get_current_question(self):
@@ -91,7 +111,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
         self.competition_group_name = f"quiz_{self.competition_id}"
         self.competition: Competition = await self.get_competition()
+        await self.accept()
 
+        print(self.channel_layer)
         if not self.channel_layer:
             return
 
@@ -99,7 +121,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             self.competition_group_name, self.channel_name
         )
 
-        await self.accept()
 
         self.user_profile = None
 

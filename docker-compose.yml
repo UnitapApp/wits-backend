@@ -36,6 +36,9 @@ services:
       - base
 
   app:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     build: .
     command: python manage.py runserver 0.0.0.0:4444
     environment:
@@ -91,6 +94,6 @@ volumes:
 
 networks:
   base:
-    # name: base
+    name: base
     external: true
     driver: bridge

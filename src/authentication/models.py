@@ -16,10 +16,18 @@ class ApiUserProfile(models.Model):
     @staticmethod
     def get_or_create_user(token: str):
         try:
-            user = requests.get(
+
+            print(token)
+            res = requests.get(
                 settings.UNITAP_API_HOST + "/auth/user/info/",
                 headers={"Authorization": token},
-            ).json()
+            )
+            print(res.text)
+
+
+            assert res.ok, "result must be ok"
+
+            user = res.json()
             return ApiUserProfile.objects.get_or_create(
                 defaults={"pk": user["pk"]}, pk=user["pk"]
             )
