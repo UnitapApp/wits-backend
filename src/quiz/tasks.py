@@ -19,8 +19,6 @@ import math
 
 from quiz.utils import get_quiz_question_state
 
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -71,7 +69,7 @@ def setup_competition_to_start(competition_pk):
     rest_still = round((competition.start_at - timezone.now()).total_seconds())
     logger.warning(f"Resting {rest_still} seconds till the quiz begins and broadcast the questions.")
 
-    while state != "FINISHED":
+    while state != "FINISHED" or rest_still >=0:
         time.sleep(rest_still)
         rest_still = evaluate_state(competition, channel_layer)
 

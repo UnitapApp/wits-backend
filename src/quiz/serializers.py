@@ -28,8 +28,10 @@ class ChoiceSerializer(serializers.ModelSerializer):
         exclude = ["is_hinted_choice"]
 
     def get_is_correct(self, choice: Choice):
-        if choice.question.answer_can_be_shown:
+        if self.context.get("include_is_correct", False) or choice.question.answer_can_be_shown:
             return choice.is_correct
+        return None
+
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -106,7 +108,7 @@ class ChoiceField(serializers.PrimaryKeyRelatedField):
             return self.pk_field.to_representation(pk)
         try:
             item = Choice.objects.get(pk=pk)
-            serializer = ChoiceSerializer(item)
+            serializer = ChoiceSerializer(item, context={"include_is_correct": True})
             return serializer.data
         except Choice.DoesNotExist:
             return None
