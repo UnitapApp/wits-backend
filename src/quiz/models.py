@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.db.models import F, Count
-from authentication.models import ApiUserProfile
+from authentication.models import UserProfile
 from .constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
 from core.fields import BigNumField, CloudflareImagesField
 
@@ -13,7 +13,7 @@ class Sponsor(models.Model):
     name = models.CharField(max_length=255, unique=True)
     link = models.URLField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    image = CloudflareImagesField(blank=True, null=True, variant="public")
+    image = CloudflareImagesField(blank=True, null=True)
 
     def __str__(self) -> str:
         return self.name
@@ -65,7 +65,7 @@ class Competition(models.Model):
         blank=True,
     )
     user_profile = models.ForeignKey(
-        ApiUserProfile, on_delete=models.CASCADE, blank=True
+        UserProfile, on_delete=models.CASCADE, blank=True
     )
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -78,11 +78,11 @@ class Competition(models.Model):
     twitter_url = models.URLField(max_length=255, null=True, blank=True)
     email_url = models.EmailField(max_length=255)
     telegram_url = models.URLField(max_length=255, null=True, blank=True)
-    token_image = CloudflareImagesField(blank=True, null=True, variant="public")
-    image = CloudflareImagesField(blank=True, null=True, variant="public")
+    token_image = CloudflareImagesField(blank=True, null=True)
+    image = CloudflareImagesField(blank=True, null=True)
 
     participants = models.ManyToManyField(
-        ApiUserProfile,
+        UserProfile,
         through="UserCompetition",
         related_name="participated_competitions",
     )
@@ -122,7 +122,7 @@ class UserCompetitionManager(models.Manager):
             return self.none()
 
         state = math.floor(
-            (timezone.now() - competition.start_at)
+            (timezone.now() - competition.start_at).seconds
             / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
         )
 
@@ -134,7 +134,7 @@ class UserCompetitionManager(models.Manager):
 
 
 class UserCompetition(models.Model):
-    user_profile = models.ForeignKey(ApiUserProfile, on_delete=models.CASCADE)
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     is_winner = models.BooleanField(default=False)
     amount_won = BigNumField(default=0)

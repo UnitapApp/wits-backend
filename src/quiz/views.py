@@ -3,7 +3,6 @@ from rest_framework.permissions import IsAuthenticated
 
 from django.utils import timezone
 
-from authentication.utils import resolve_user_from_request
 from quiz.paginations import StandardResultsSetPagination
 from quiz.filters import CompetitionFilter, NestedCompetitionFilter
 from quiz.models import Competition, Question, UserAnswer, UserCompetition
@@ -33,7 +32,6 @@ class CompetitionView(RetrieveAPIView):
 class QuestionView(RetrieveAPIView):
     http_method_names = ["get"]
     serializer_class = QuestionSerializer
-    # queryset = Question.objects.filter(can_be_shown=True)
     queryset = Question.objects.all()
 
 
@@ -44,11 +42,11 @@ class EnrollInCompetitionView(ListCreateAPIView):
     serializer_class = UserCompetitionSerializer
 
     def perform_create(self, serializer):
-        user = resolve_user_from_request(self.request)
+        user = self.request.user.profile # type: ignore
         serializer.save(user_profile=user)
 
     def get_queryset(self):
-        return self.queryset.filter(user_profile=resolve_user_from_request(self.request))
+        return self.queryset.filter(user_profile=self.request.user.profile) # type:ignore
 
 
 class UserAnswerView(ListCreateAPIView):

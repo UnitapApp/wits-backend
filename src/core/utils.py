@@ -7,8 +7,6 @@ from contextlib import contextmanager
 from django.utils.timezone import datetime
 from django.core.cache import cache
 
-
-
 @contextmanager
 def memcache_lock(lock_id, oid, lock_expire=60):
     timeout_at = time.monotonic() + lock_expire
@@ -25,4 +23,6 @@ def memcache_lock(lock_id, oid, lock_expire=60):
             # owned by someone else
             # also don't release the lock if we didn't acquire it
             cache.delete(lock_id)
+
+
 

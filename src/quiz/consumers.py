@@ -9,7 +9,6 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.core.serializers.json import DjangoJSONEncoder
 
-from authentication.utils import resolve_user_from_token
 from quiz.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
 from quiz.serializers import CompetitionSerializer, QuestionSerializer
 from quiz.utils import is_user_eligible_to_participate
@@ -103,9 +102,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     def get_competition_stats(self) -> Any:
         return CompetitionSerializer(instance=self.competition).data
 
-    async def login_user(self, token: str):
-        self.user_profile = await resolve_user_from_token(token)
-
     async def connect(self):
         self.competition_id = self.scope["url_route"]["kwargs"]["competition_id"]
 
@@ -136,12 +132,10 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
         command = data["command"]
+        self.user_profile = self.scope['user'].profile
 
         if command == "PING":
             await self.send("PONG")
-
-        if command == "LOGIN":
-            await self.login_user(data["args"]["token"])
 
         if not self.user_profile:
             return

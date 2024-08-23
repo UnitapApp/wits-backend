@@ -2,14 +2,16 @@ import math
 from django.core.cache import cache
 from django.utils import timezone
 
-from authentication.models import ApiUserProfile
+from authentication.models import UserProfile
 from quiz.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
 from quiz.models import Competition, UserCompetition
 
 
 def is_user_eligible_to_participate(
-    user_profile: ApiUserProfile, competition: Competition
+    user_profile: UserProfile | None, competition: Competition
 ) -> bool:
+    if not user_profile:
+        return False
     try:
         user_competition = UserCompetition.objects.get(
             user_profile=user_profile, competition=competition
@@ -28,10 +30,10 @@ def is_user_eligible_to_participate(
     ):
         return False
 
-    question_number = user_competition.users_answer.last().question.number
+    question_number = user_competition.users_answer.count()
 
     state = math.floor(
-        (timezone.now() - competition.start_at)
+        (timezone.now() - competition.start_at).seconds
         / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
     )
 

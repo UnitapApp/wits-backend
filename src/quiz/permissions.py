@@ -1,6 +1,5 @@
 from rest_framework.permissions import BasePermission
 
-from authentication.utils import resolve_user_from_request
 from quiz.models import UserCompetition
 from quiz.utils import is_user_eligible_to_participate
 
@@ -16,7 +15,7 @@ class IsEligibleToAnswer(BasePermission):
         if user_competition_pk is None:
             return False
 
-        user_profile = resolve_user_from_request(request)
+        user_profile = request.user.profile
         
         try:
             user_competition = UserCompetition.objects.get(pk=user_competition_pk)
