@@ -28,4 +28,5 @@ class AuthenticateSerializer(serializers.Serializer):
 
     assert type(self.validated_data) == dict, "validated data must not be empty"
 
+
     return crypto.verify_signature(self.validated_data.get("address"), self.validated_data.get("message"), self.validated_data.get("signature"))

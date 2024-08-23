@@ -29,8 +29,8 @@ SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-2+aj%(1gmczhxrb+oxf2d
 DEBUG = bool(os.environ.get("DEBUG"))
 
 
-REDIS_HOST = os.environ.get("REDIS_HOST")
-REDIS_PORT = os.environ.get("REDIS_PORT")
+REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
+REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
 UNITAP_API_HOST = os.environ.get("UNITAP_API_HOST")
 
 CLOUDFLARE_IMAGES_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    "rest_framework",
+    "rest_framework.authtoken",
     'django.contrib.staticfiles',
     'quiz.apps.QuizConfig',
     'django_celery_results',
@@ -180,7 +182,11 @@ APPEND_SLASH = True
 # ------- Rest framework
 
 
+
 REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_RENDERER_CLASSES": (
         "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
@@ -193,8 +199,9 @@ REST_FRAMEWORK = {
     ),
 }
 
-
 CELERY_BROKER_URL = REDIS_URL
 
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'default'
+
+CELERY_TIMEZONE = 'UTC'

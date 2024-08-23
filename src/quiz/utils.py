@@ -1,5 +1,4 @@
 import math
-from django.core.cache import cache
 from django.utils import timezone
 
 from authentication.models import UserProfile
@@ -32,12 +31,25 @@ def is_user_eligible_to_participate(
 
     question_number = user_competition.users_answer.count()
 
-    state = math.floor(
-        (timezone.now() - competition.start_at).seconds
-        / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-    )
+    state = get_quiz_question_state(competition)
 
-    if state + 1 > question_number:
+    if state > question_number:
         return False
 
     return True
+
+
+
+def get_quiz_question_state(competition: Competition):
+    start_at = competition.start_at
+
+    if timezone.is_naive(start_at):
+        start_at = timezone.make_aware(start_at, timezone.get_current_timezone())
+    else:
+        start_at = start_at.astimezone(timezone.get_current_timezone())
+
+
+    return math.floor(
+        (timezone.now() - start_at).seconds
+        / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+    )

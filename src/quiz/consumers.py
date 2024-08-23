@@ -109,13 +109,14 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         self.competition: Competition = await self.get_competition()
         await self.accept()
 
-        print(self.channel_layer)
         if not self.channel_layer:
             return
 
         await self.channel_layer.group_add(
             self.competition_group_name, self.channel_name
         )
+
+        await self.get_current_question()
 
 
         self.user_profile = None

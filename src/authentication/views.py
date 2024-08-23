@@ -1,10 +1,12 @@
 
+from typing import Any
 from rest_framework.generics import (
     CreateAPIView,
     RetrieveUpdateAPIView
 )
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
 from rest_framework import status
 from django.contrib.auth.models import User
 from authentication.models import UserProfile
@@ -15,9 +17,14 @@ from web3 import Web3
 import uuid
 
 
+
 class GetProfileView(RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserProfileSerializer
+    queryset = UserProfile.objects.all()
+    
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
 
     def get_object(self):
         return self.request.user.profile # type: ignore
@@ -32,7 +39,7 @@ class AuthenticateView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
         headers = self.get_success_headers(serializer.data)
 
-        wallet_address = serializer.validated_data["wallet_address"]
+        wallet_address = serializer.validated_data["address"]
 
         try:
             profile = UserProfile.objects.get(
@@ -45,6 +52,14 @@ class AuthenticateView(CreateAPIView):
                 wallet_address=Web3.to_checksum_address(wallet_address),
                 user=user
             )
+
+        data: Any = UserProfileSerializer(instance=profile).data
+
+        token, _ = Token.objects.get_or_create(
+            user=profile.user
+        )
         
-        return Response(UserProfileSerializer(instance=profile).data, status=status.HTTP_201_CREATED, headers=headers)
+        data['token'] = token.key
+        
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
         

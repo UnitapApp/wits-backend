@@ -184,7 +184,6 @@ class Question(models.Model):
             + timezone.timedelta(
                 seconds=(self.number - 1)
                 * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-                + ANSWER_TIME_SECOND
             )
             <= timezone.now()
         )

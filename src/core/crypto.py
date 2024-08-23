@@ -1,4 +1,5 @@
 
+import json
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from django.utils import timezone
@@ -22,8 +23,10 @@ class Crypto:
 
         now = timezone.now()
 
+        data = json.loads(message)
+
         signed_time = timezone.datetime.fromisoformat(
-          message["message"]["IssuedAt"].replace("Z", "+00:00")
+          data["message"]["IssuedAt"].replace("Z", "+00:00")
         )
 
         return signer == address and now - signed_time > timezone.timedelta(minutes=self.minutes_to_verify)

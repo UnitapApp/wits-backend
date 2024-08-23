@@ -10,13 +10,14 @@ from channels.layers import get_channel_layer
 from core.utils import memcache_lock
 from quiz.constants import (
     ANSWER_TIME_SECOND,
-    REGISTER_COMPETITION_TASK_PERIOD_SECONDS,
     REST_BETWEEN_EACH_QUESTION_SECOND,
 )
-from quiz.models import Competition, Question, UserCompetition
+from quiz.models import Competition, Question
 from quiz.serializers import QuestionSerializer
 import logging
 import math
+
+from quiz.utils import get_quiz_question_state
 
 
 
@@ -28,18 +29,12 @@ def handle_quiz_end(competition: Competition):
 
 
 def evaluate_state(competition: Competition, channel_layer):
-    time_scale = timezone.now() - competition.start_at
 
-    question_state = (
-        math.floor(
-            time_scale.seconds
-            / (REST_BETWEEN_EACH_QUESTION_SECOND + ANSWER_TIME_SECOND)
-        )
-        + 1
-    )
+    question_state = get_quiz_question_state(competition) + 1
+
     logger.warning(f"sending broadcast question {question_state}.")
 
-    if question_state - 1 > competition.questions.count():
+    if question_state > competition.questions.count():
         handle_quiz_end(competition)
         logger.warning(f"no more questions remaining, broadcast quiz finished.")
         async_to_sync(channel_layer.group_send)(  # type: ignore
@@ -50,12 +45,14 @@ def evaluate_state(competition: Competition, channel_layer):
 
     question = Question.objects.get(competition=competition, number=question_state)
 
+    data = QuestionSerializer(instance=question).data
+
+
     async_to_sync(channel_layer.group_send)(  # type: ignore
         f"quiz_{competition.pk}",
-        {"type": "send_question", "data": json.dumps(QuestionSerializer(instance=question).data, cls=DjangoJSONEncoder)},
+        {"type": "send_question", "data": json.dumps(data, cls=DjangoJSONEncoder)},
     )
 
-    # calculate the amount to be sleep
     return ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND
 
 
@@ -71,7 +68,7 @@ def setup_competition_to_start(competition_pk):
 
     state = "IDLE"
 
-    rest_still = (competition.start_at - timezone.now()).seconds
+    rest_still = round((competition.start_at - timezone.now()).total_seconds())
     logger.warning(f"Resting {rest_still} seconds till the quiz begins and broadcast the questions.")
 
     while state != "FINISHED":

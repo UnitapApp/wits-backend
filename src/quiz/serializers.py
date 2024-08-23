@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from quiz.models import Choice, Competition, Question, UserAnswer, UserCompetition
+from quiz.utils import is_user_eligible_to_participate
 
 
 class SmallQuestionSerializer(serializers.ModelSerializer):
@@ -24,7 +25,7 @@ class ChoiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Choice
-        fields = "__all__"
+        exclude = ["is_hinted_choice"]
 
     def get_is_correct(self, choice: Choice):
         if choice.question.answer_can_be_shown:
@@ -32,15 +33,25 @@ class ChoiceSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    competition = CompetitionSerializer()
+    # competition = CompetitionSerializer()
     choices = ChoiceSerializer(many=True)
     remain_participants_count = serializers.SerializerMethodField(read_only=True)
     total_participants_count = serializers.SerializerMethodField(read_only=True)
     amount_won_per_user = serializers.SerializerMethodField(read_only=True)
+    is_eligible = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Question
         fields = "__all__"
+
+
+    def get_is_eligible(self, ques: Question):
+        try:
+            user_profile = self.context.get("request").user.profile # type: ignore
+        except AttributeError:
+            return False
+        else:
+            return is_user_eligible_to_participate(user_profile, ques.competition)
 
     def get_remain_participants_count(self, ques: Question):
         users_answered_correct = ques.users_answer.filter(
