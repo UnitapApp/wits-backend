@@ -49,7 +49,7 @@ def get_quiz_question_state(competition: Competition):
         start_at = start_at.astimezone(timezone.get_current_timezone())
 
 
-    return math.floor(
+    return min(math.floor(
         (timezone.now() - start_at).seconds
         / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-    )
+    ), competition.questions.count())

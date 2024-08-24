@@ -31,9 +31,23 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             return {}
         
         answers = UserAnswer.objects.filter(user_competition__competition=self.competition, user_competition__user_profile=self.user_profile)
-        serialized_answers = UserAnswerSerializer(answers, many=True)
 
-        return serialized_answers.data
+        diff = get_quiz_question_state(self.competition) - answers.count()
+        missed_answers = []
+
+        if diff > 0:
+            for i in range(diff):
+                question = Question.objects.get(number=answers.count() + i + 1, competition=self.competition)
+                answer = UserAnswer(
+                    user_competition=UserCompetition.objects.get(user_profile=self.user_profile, competition=self.competition),
+                    question=question,
+                    id=-1
+                )
+                missed_answers.append(answer)
+
+        serialized_answers = UserAnswerSerializer(list(answers) + missed_answers, many=True)
+
+        return list(map(lambda x: x if x["selected_choice"] else { **x, "selected_choice": { "is_correct": False, "id": None } }, serialized_answers.data))
 
     @database_sync_to_async
     def resolve_user(self):
@@ -103,7 +117,8 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         question = await self.get_question(state)
 
         return {"question": question, "type": "new_question"}
-
+    
+    @database_sync_to_async
     def get_competition_stats(self) -> Any:
         return CompetitionSerializer(instance=self.competition).data
 
@@ -121,9 +136,13 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_add(
             self.competition_group_name, self.channel_name
         )
-
-        await self.send_json(await self.get_current_question())
         await self.send_json({ "type": "answers_history", "data": await self.send_user_answers() })
+
+        if await database_sync_to_async(lambda: self.competition.is_in_progress)():
+            await self.send_json(await self.get_current_question())
+
+        else:
+            await self.send_json(await self.get_competition_stats())
 
     async def disconnect(self, close_code):
         await self.close()
@@ -141,9 +160,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         if command == "PING":
             await self.send("PONG")
 
-        # if command == "LOGIN_USER":
-        #     await self.resolve_user(data['args']['token'])
-
         if not self.user_profile:
             return
 
@@ -152,7 +168,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json(await self.get_current_question())
 
             if command == "GET_COMPETITION":
-                await self.send_json(self.get_competition_stats())
+                await self.send_json(await self.get_competition_stats())
 
             if command == "GET_STATS":
                 await self.send_json(await self.get_quiz_stats())
@@ -169,7 +185,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                     data["args"]["selected_choice_id"],
                 )
 
-                await self.send_json({ "type": "ANSWER_ADD", "data": {**res, "is_eligible": res["is_correct"]} })
+                await self.send_json({ "type": "ANSWER_ADD", "data": {**res, "is_eligible": res["is_correct"], "competition": await self.get_competition_stats()} })
 
         except Exception as e:
             logger.warn(e)
@@ -204,8 +220,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             "type": "submit_answer_result",
             "answer": {
                 "is_correct": selected_choice.is_correct,
-                "competition": self.get_competition_stats(),
                 "answer": UserAnswerSerializer(instance=answer, context={ "create": True }).data,
-
             }
         }
