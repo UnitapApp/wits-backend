@@ -48,12 +48,15 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 
     def get_is_eligible(self, ques: Question):
-        try:
-            user_profile = self.context.get("request").user.profile # type: ignore
-        except AttributeError:
-            return False
+        if self.context.get("request"):
+            try:
+                user_profile = self.context.get("request").user.profile # type: ignore
+            except AttributeError:
+                return False
         else:
-            return is_user_eligible_to_participate(user_profile, ques.competition)
+            user_profile = self.context.get("profile")
+
+        return is_user_eligible_to_participate(user_profile, ques.competition)
 
     def get_remain_participants_count(self, ques: Question):
         users_answered_correct = ques.users_answer.filter(
@@ -108,7 +111,10 @@ class ChoiceField(serializers.PrimaryKeyRelatedField):
             return self.pk_field.to_representation(pk)
         try:
             item = Choice.objects.get(pk=pk)
-            serializer = ChoiceSerializer(item, context={"include_is_correct": True})
+            if self.context.get("request"):
+                serializer = ChoiceSerializer(item, context={"include_is_correct": self.context.get("request").method == "POST"})
+            else:
+                serializer = ChoiceSerializer(item, context={"include_is_correct": bool(self.context.get("create")) })
             return serializer.data
         except Choice.DoesNotExist:
             return None

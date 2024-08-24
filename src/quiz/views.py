@@ -27,8 +27,6 @@ class CompetitionView(RetrieveAPIView):
     serializer_class = CompetitionSerializer
 
 
-
-
 class QuestionView(RetrieveAPIView):
     http_method_names = ["get"]
     serializer_class = QuestionSerializer

@@ -18,8 +18,4 @@ app.autodiscover_tasks()
 
 
 
-# app.conf.event_serializer = 'pickle'
-# app.conf.task_serializer = 'pickle'
-# app.conf.result_serializer = 'pickle'
-# app.conf.accept_content = ['application/json', 'application/x-python-serialize']
 
