@@ -135,7 +135,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        print(self.scope["user"])
         data = json.loads(text_data)
         command = data["command"]
 
