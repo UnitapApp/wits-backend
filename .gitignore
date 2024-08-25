@@ -179,3 +179,7 @@ __pycache__
 .env.test
 
 media
+
+
+
+src/staticfiles/
