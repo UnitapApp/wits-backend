@@ -179,7 +179,10 @@ CHANNEL_LAYERS = {
     },
 }
 
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://wits-backend-production.up.railway.app",
+    "http://localhost:4444",
+]
 CORS_ALLOW_ALL_ORIGINS = True
 APPEND_SLASH = True
 
