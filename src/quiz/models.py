@@ -179,12 +179,15 @@ class Question(models.Model):
 
     @property
     def answer_can_be_shown(self):
+        answer_time = ANSWER_TIME_SECOND - 2
+        
+        seconds = (self.number - 1) * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND) + answer_time
+
         return (
-            self.competition.start_at
+            (self.competition.start_at
             + timezone.timedelta(
-                seconds=(self.number - 1)
-                * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-            )
+                seconds=seconds
+            ))
             <= timezone.now()
         )
 

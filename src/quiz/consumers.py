@@ -112,7 +112,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         if now < competition_time:
             return {"error": "wait for competition to begin", "data": None}
 
-        state = get_quiz_question_state(competition=self.competition) + 1
+        state = (await database_sync_to_async(get_quiz_question_state)(competition=self.competition)) + 1
 
         question = await self.get_question(state)
 

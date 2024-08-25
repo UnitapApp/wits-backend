@@ -41,6 +41,7 @@ def is_user_eligible_to_participate(
 
 
 def get_quiz_question_state(competition: Competition):
+ 
     start_at = competition.start_at
 
     if timezone.is_naive(start_at):
@@ -48,7 +49,9 @@ def get_quiz_question_state(competition: Competition):
     else:
         start_at = start_at.astimezone(timezone.get_current_timezone())
 
-
+    if start_at > timezone.now():
+        return 0
+    
     return min(math.floor(
         (timezone.now() - start_at).seconds
         / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
