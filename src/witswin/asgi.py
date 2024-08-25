@@ -11,14 +11,17 @@ import os
 
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
-from witswin.routing import websocket_urlpatterns
 from channels.security.websocket import AllowedHostsOriginValidator
-from .middleware import BasicTokenHeaderAuthentication
 
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'witswin.settings')
 
 django_asgi_app = get_asgi_application()
+
+from .middleware import BasicTokenHeaderAuthentication
+from witswin.routing import websocket_urlpatterns
+
+
 
 application = ProtocolTypeRouter({
   "http": django_asgi_app,
