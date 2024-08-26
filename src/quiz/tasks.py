@@ -4,6 +4,7 @@ import time
 from celery import shared_task
 from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Count, Q
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -12,7 +13,7 @@ from quiz.constants import (
     ANSWER_TIME_SECOND,
     REST_BETWEEN_EACH_QUESTION_SECOND,
 )
-from quiz.models import Competition, Question
+from quiz.models import Competition, Question, UserCompetition
 from quiz.serializers import QuestionSerializer
 import logging
 import math
@@ -35,6 +36,29 @@ def evaluate_state(competition: Competition, channel_layer):
     if question_state > competition.questions.count():
         handle_quiz_end(competition)
         logger.warning(f"no more questions remaining, broadcast quiz finished.")
+
+        logger.info("calculating results")
+        question_number = get_quiz_question_state(competition) + 1
+
+        users_participated = UserCompetition.objects.filter(
+            competition=competition
+        )
+
+        winners = users_participated.annotate(
+            correct_answer_count=Count('users_answer', filter=Q(users_answer__selected_choice__is_correct=True))
+        ).filter(
+            correct_answer_count__gte=question_number
+        )
+
+        winners_count = winners.count()
+
+        amount_win = competition.prize_amount
+
+        winners.update(
+            is_winner=True,
+            amount_won=amount_win / winners_count
+        )
+
         async_to_sync(channel_layer.group_send)(  # type: ignore
             f"quiz_{competition.pk}",
             {"type": "finish_quiz", "data": {  }},

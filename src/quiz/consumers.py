@@ -90,12 +90,15 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     async def send_quiz_stats(self, event):
         await self.send_json(await self.get_quiz_stats())
 
+    @database_sync_to_async
+    def calculate_quiz_winners(self):
+        return list(UserCompetition.objects.filter(is_winner=True).values_list("user_profile__wallet_address", flat=True))
+
     async def finish_quiz(self, event):
-        question_data = event["data"]
 
-        await self.send_json({"stats": question_data, "event": "quiz_finish"})
+        winners = await self.calculate_quiz_winners()
 
-        await self.disconnect(0)
+        await self.send_json({"winners_list": winners, "type": "quiz_finish"})
 
     @database_sync_to_async
     def get_question(self, index: int):
@@ -197,7 +200,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         if await database_sync_to_async(lambda: self.competition.is_in_progress)():
             await self.send_json(await self.get_current_question())
         else:
-            await self.send_json(await self.get_competition_stats())
+            await self.finish_quiz(None)
 
     async def disconnect(self, close_code):
         await self.close()

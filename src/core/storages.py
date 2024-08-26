@@ -110,7 +110,6 @@ class CloudflareImagesStorage(Storage):
         """
         Custom methods which allow to pass a variant and respect the original signature of `url`
         """
-        print("URL: ")
         return self.service.get_url(name, variant)
 
     def get_accessed_time(self, name):
