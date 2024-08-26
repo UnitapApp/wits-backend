@@ -5,7 +5,7 @@ from channels.generic.websocket import (
 )
 from channels.db import database_sync_to_async
 from django.utils import timezone
-from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Q, Count
 from quiz.serializers import CompetitionSerializer, QuestionSerializer, UserAnswerSerializer
 from quiz.utils import get_quiz_question_state, is_user_eligible_to_participate
 from djangorestframework_camel_case.render import CamelCaseJSONRenderer
@@ -87,6 +87,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
         await self.send_json({"question": {**json.loads(question_data), "is_eligible": await database_sync_to_async(lambda:  is_user_eligible_to_participate(self.user_profile, self.competition))()}, "type": "new_question"})
 
+    async def send_quiz_stats(self, event):
+        await self.send_json(await self.get_quiz_stats())
+
     async def finish_quiz(self, event):
         question_data = event["data"]
 
@@ -114,10 +117,15 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         users_participated = UserCompetition.objects.filter(
             competition=self.competition
         )
-        users_participating = users_participated.filter(
-            users_answer__selected_choice__is_correct=True,
-            users_answer__gte=get_quiz_question_state(self.competition)
-        )
+
+        if self.competition.can_be_shown:
+            users_participating = users_participated.annotate(
+                correct_answer_count=Count('users_answer', filter=Q(users_answer__selected_choice__is_correct=True))
+            ).filter(
+                correct_answer_count__gte=get_quiz_question_state(self.competition) + 1
+            )
+        else:
+            users_participating = users_participated
 
         participating_count = users_participating.count()
 

@@ -51,7 +51,14 @@ def evaluate_state(competition: Competition, channel_layer):
         {"type": "send_question", "data": json.dumps(data, cls=DjangoJSONEncoder)},
     )
 
-    return ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND
+    time.sleep(ANSWER_TIME_SECOND)
+
+    async_to_sync(channel_layer.group_send)(  # type: ignore
+        f"quiz_{competition.pk}",
+        {"type": "send_quiz_stats", "data": ""},
+    )
+
+    return REST_BETWEEN_EACH_QUESTION_SECOND
 
 
 @shared_task(bind=True)
@@ -66,16 +73,15 @@ def setup_competition_to_start(self, competition_pk):
         logging.warning(f"Could not acquire process lock at {self.name}")
         return
 
-
     try:
-        competition = Competition.objects.get(pk=competition_pk)
+        competition: Competition = Competition.objects.get(pk=competition_pk)
     except Competition.DoesNotExist:
         logger.warning(f"Competition with pk {competition_pk} not exists.")
         return
 
     state = "IDLE"
 
-    rest_still = round((competition.start_at - timezone.now()).total_seconds())
+    rest_still = (competition.start_at - timezone.now()).total_seconds()
     logger.warning(f"Resting {rest_still} seconds till the quiz begins and broadcast the questions.")
 
     while state != "FINISHED" or rest_still > 0:
@@ -85,6 +91,12 @@ def setup_competition_to_start(self, competition_pk):
         if rest_still == -1:
             state = "FINISHED"
             break
+
+    time.sleep(2)
+    async_to_sync(channel_layer.group_send)(  # type: ignore
+        f"quiz_{competition.pk}",
+        {"type": "send_quiz_stats", "data": None},
+    )
 
     # question = competition.questions.order_by("number").first()
 

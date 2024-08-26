@@ -86,8 +86,8 @@ class Competition(models.Model):
         through="UserCompetition",
         related_name="participated_competitions",
     )
-    winner_count = models.IntegerField(default=0)
-    amount_won = BigNumField(default=0)
+    winner_count = models.IntegerField(default=0, blank=True)
+    amount_won = BigNumField(default=0, blank=True)
 
     is_active = models.BooleanField(default=True)
 
