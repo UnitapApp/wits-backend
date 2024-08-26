@@ -1,7 +1,13 @@
 from rest_framework import serializers
 
-from quiz.models import Choice, Competition, Question, UserAnswer, UserCompetition
+from quiz.models import Choice, Competition, Question, Sponsor, UserAnswer, UserCompetition
 from quiz.utils import is_user_eligible_to_participate
+
+
+class SponsorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sponsor
+        fields = "__all__"
 
 
 class SmallQuestionSerializer(serializers.ModelSerializer):
@@ -12,6 +18,7 @@ class SmallQuestionSerializer(serializers.ModelSerializer):
 
 class CompetitionSerializer(serializers.ModelSerializer):
     questions = SmallQuestionSerializer(many=True, read_only=True)
+    sponsors = SponsorSerializer(many=True, read_only=True)
 
     class Meta:
         model = Competition
