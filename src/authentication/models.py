@@ -15,11 +15,10 @@ class UserProfile(models.Model):
         ],
         null=True,
         blank=True,
-        unique=True
+        unique=True,
     )
     wallet_address = models.CharField(max_length=512, db_index=True, unique=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-
 
     def __str__(self) -> str:
         return self.username or self.wallet_address

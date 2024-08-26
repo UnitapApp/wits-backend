@@ -4,19 +4,50 @@ import django.core.validators
 from django.db import migrations, models
 
 
+def create_super_user(apps, schema_editor):
+    User = apps.get_model("django.contrib.auth", "User")
+    User.objects.create_superuser("admin", "maktabi876@gmail.com", "ChangeSoon1234")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authentication', '0001_initial'),
+        ("authentication", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='UserProfile',
+            name="UserProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('username', models.CharField(blank=True, max_length=150, null=True, unique=True, validators=[django.core.validators.RegexValidator(message='Username can only contain letters, digits and @/./+/-/_.', regex='^[\\w.@+-]+$')])),
-                ('wallet_address', models.CharField(db_index=True, max_length=512, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "username",
+                    models.CharField(
+                        blank=True,
+                        max_length=150,
+                        null=True,
+                        unique=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Username can only contain letters, digits and @/./+/-/_.",
+                                regex="^[\\w.@+-]+$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "wallet_address",
+                    models.CharField(db_index=True, max_length=512, unique=True),
+                ),
             ],
         ),
+        migrations.RunPython(create_super_user),
     ]
