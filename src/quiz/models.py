@@ -164,6 +164,8 @@ class Question(models.Model):
     )
     text = models.TextField()
 
+    choices: models.QuerySet
+
     users_answer: models.QuerySet
 
     @property

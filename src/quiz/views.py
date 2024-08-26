@@ -34,7 +34,7 @@ class QuestionView(RetrieveAPIView):
 
 
 class EnrollInCompetitionView(ListCreateAPIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
     filter_backends = [CompetitionFilter]
     queryset = UserCompetition.objects.all()
     serializer_class = UserCompetitionSerializer

@@ -30,7 +30,7 @@ class BasicTokenHeaderAuthentication:
         headers = dict(scope["headers"])
         cookie = SimpleCookie()
         cookie.load(str(headers[b'cookie']))
-
+        print(cookie.keys())
         if "userToken" in cookie.keys():
             scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value) # type: ignore
         else:

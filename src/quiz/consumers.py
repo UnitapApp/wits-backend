@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class QuizConsumer(AsyncJsonWebsocketConsumer):
+    user_competition: UserCompetition
+
     async def send_json(self, content, close=False):
         """
         Encode the given content as JSON and send it to the client.
@@ -39,7 +41,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             for i in range(diff):
                 question = Question.objects.get(number=answers.count() + i + 1, competition=self.competition)
                 answer = UserAnswer(
-                    user_competition=UserCompetition.objects.get(user_profile=self.user_profile, competition=self.competition),
+                    user_competition=self.user_competition,
                     question=question,
                     id=-1
                 )
@@ -53,6 +55,24 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     def resolve_user(self):
         return self.scope['user'].profile
 
+    @database_sync_to_async
+    def resolve_user_competition(self):
+        return UserCompetition.objects.get(user_profile=self.user_profile, competition=self.competition)
+    
+    @database_sync_to_async
+    def send_hint_question(self, question_id):
+        
+        user_competition = self.user_competition
+        
+        if not user_competition or user_competition.is_hint_used:
+            return
+        
+        question: Question = Question.objects.get(pk=question_id, competition=self.competition)
+
+        user_competition.is_hint_used = True
+        user_competition.save()
+
+        return list(question.choices.filter(is_hinted_choice=True).values_list('pk', flat=True))
 
     @classmethod
     async def encode_json(cls, content):
@@ -94,14 +114,22 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         users_participated = UserCompetition.objects.filter(
             competition=self.competition
         )
-        users_participating = users_participated.count()
+        users_participating = users_participated.filter(
+            users_answer__selected_choice__is_correct=True,
+            users_answer__gte=get_quiz_question_state(self.competition)
+        )
 
+        participating_count = users_participating.count()
 
         return {
-            "users_participating": users_participating,
-            "prize_to_win": prize_to_win / users_participating,
-            "total_participants_count": self.competition.participants.count(),
-            "questions_count": self.competition.questions.count(),
+            "type": "quiz_stats",
+            "data": {
+                "users_participating": participating_count,
+                "prize_to_win": prize_to_win / participating_count if participating_count > 0 else 0,
+                "total_participants_count": self.competition.participants.count(),
+                "questions_count": self.competition.questions.count(),
+                "hint_count": int(not self.user_competition.is_hint_used) if self.user_competition else 0
+            },
         }
 
     async def get_current_question(self):
@@ -128,6 +156,8 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         self.competition_group_name = f"quiz_{self.competition_id}"
         self.competition: Competition = await self.get_competition()
         self.user_profile = await self.resolve_user()
+        self.user_competition = await self.resolve_user_competition()
+
         await self.accept()
 
         if not self.channel_layer:
@@ -138,9 +168,10 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         )
         await self.send_json({ "type": "answers_history", "data": await self.send_user_answers() })
 
+        await self.send_json(await self.get_quiz_stats())
+
         if await database_sync_to_async(lambda: self.competition.is_in_progress)():
             await self.send_json(await self.get_current_question())
-
         else:
             await self.send_json(await self.get_competition_stats())
 
@@ -176,6 +207,11 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             if command == "GET_QUESTION":
                 await self.send_json(await self.get_question(data["args"]["index"]))
 
+            if command == "GET_HINT":
+                hint_choices = await self.send_hint_question(data['args']['question_id'])
+                
+                await self.send_json({ "type": "hint_question", "data": hint_choices, 'question_id': data['args']['question_id'] })
+
             if command == "ANSWER":
                 if not await self.is_user_eligible_to_participate():
                     return
@@ -205,10 +241,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     def save_answer(self, question_id, selected_choice_id):
         question = Question.objects.can_be_shown.get(pk=question_id)
         selected_choice = Choice.objects.get(pk=selected_choice_id)
-        user_competition = UserCompetition.objects.get(
-            user_profile=self.user_profile,
-            competition_id=self.competition_id,
-        )
+        user_competition = self.user_competition
 
         answer = UserAnswer.objects.create(
             user_competition=user_competition,
