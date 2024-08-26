@@ -6,7 +6,7 @@ from django.db import migrations
 
 
 def create_super_user(apps, schema_editor):
-    User = apps.get_model("django.contrib.auth", "User")
+    User = apps.get_model('auth', 'User')
     User.objects.create_superuser("admin", "maktabi876@gmail.com", "ChangeSoon1234")
 
 
