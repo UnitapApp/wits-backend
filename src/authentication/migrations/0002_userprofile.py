@@ -4,11 +4,6 @@ import django.core.validators
 from django.db import migrations, models
 
 
-def create_super_user(apps, schema_editor):
-    User = apps.get_model("django.contrib.auth", "User")
-    User.objects.create_superuser("admin", "maktabi876@gmail.com", "ChangeSoon1234")
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -49,5 +44,4 @@ class Migration(migrations.Migration):
                 ),
             ],
         ),
-        migrations.RunPython(create_super_user),
     ]
