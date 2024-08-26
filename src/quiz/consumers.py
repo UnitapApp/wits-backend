@@ -110,6 +110,19 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         return is_user_eligible_to_participate(
             user_profile=self.user_profile, competition=self.competition
         )
+    
+    def get_round_participants(self, total_participants, question_number):
+        if question_number <= 0:
+            return 0
+        
+        if question_number > self.competition.questions.count():
+            return 0
+        
+        return total_participants.annotate(
+            correct_answer_count=Count('users_answer', filter=Q(users_answer__selected_choice__is_correct=True))
+        ).filter(
+            correct_answer_count__gte=question_number
+        ).count()
 
     @database_sync_to_async
     def get_quiz_stats(self):
@@ -118,11 +131,13 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             competition=self.competition
         )
 
+        question_number = get_quiz_question_state(self.competition) + 1
+
         if self.competition.can_be_shown:
             users_participating = users_participated.annotate(
                 correct_answer_count=Count('users_answer', filter=Q(users_answer__selected_choice__is_correct=True))
             ).filter(
-                correct_answer_count__gte=get_quiz_question_state(self.competition) + 1
+                correct_answer_count__gte=question_number
             )
         else:
             users_participating = users_participated
@@ -136,7 +151,8 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 "prize_to_win": prize_to_win / participating_count if participating_count > 0 else 0,
                 "total_participants_count": self.competition.participants.count(),
                 "questions_count": self.competition.questions.count(),
-                "hint_count": int(not self.user_competition.is_hint_used) if self.user_competition else 0
+                "hint_count": int(not self.user_competition.is_hint_used) if self.user_competition else 0,
+                "previous_round_losses": min(self.get_round_participants(users_participated, question_number - 1) - participating_count, 0)
             },
         }
 
