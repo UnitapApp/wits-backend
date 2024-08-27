@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django.contrib.staticfiles",
     "quiz.apps.QuizConfig",
+    "django_celery_beat",
     "django_celery_results",
     "authentication.apps.AuthenticationConfig",
 ]
