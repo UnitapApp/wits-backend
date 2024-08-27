@@ -68,7 +68,6 @@ class AuthenticateView(CreateAPIView):
             value=token.key,
             httponly=True,
             secure=True,
-            domain='api.wits.win'
         )
 
 

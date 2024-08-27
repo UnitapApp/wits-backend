@@ -53,9 +53,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def resolve_user(self):
-        if hasattr(self.scope['user'], "profile"):
-            return self.scope['user'].profile
-        return None
+        return self.scope['user'].profile
 
     @database_sync_to_async
     def resolve_user_competition(self):
@@ -82,7 +80,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def get_competition(self):
-        return Competition.objects.get(pk=self.competition_id)
+        return Competition.objects.filter(pk=self.competition_id).first()
 
     async def send_question(self, event):
         question_data = event["data"]
@@ -198,6 +196,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json({ "type": "answers_history", "data": await self.send_user_answers() })
 
         await self.send_json(await self.get_quiz_stats())
+
+        if self.competition.start_at > timezone.now():
+            await self.send_json({"type": "idle", "message": "wait for quiz to start"})
 
         if await database_sync_to_async(lambda: self.competition.is_in_progress)():
             await self.send_json(await self.get_current_question())
