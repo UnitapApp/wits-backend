@@ -1,3 +1,3 @@
 #!/bin/sh
 
-celery -A witswin worker -B & celery -A witswin beat -S redbeat.RedBeatScheduler --loglevel=info
+celery -A witswin worker --beat -l INFO
