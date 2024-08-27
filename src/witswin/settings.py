@@ -189,6 +189,16 @@ CORS_ALLOW_ALL_ORIGINS = True
 APPEND_SLASH = True
 
 
+# REDIS CACHE CONFIG
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
+}
+
+
+
 # ------- Rest framework
 
 
@@ -214,3 +224,6 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = "default"
 
 CELERY_TIMEZONE = "UTC"
+CELERY_BEAT_SCHEDULER = os.environ.get(
+    "CELERY_BEAT_SCHEDULER", default="django_celery_beat.schedulers.DatabaseScheduler"
+)
