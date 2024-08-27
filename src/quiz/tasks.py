@@ -89,13 +89,13 @@ def evaluate_state(competition: Competition, channel_layer):
 def setup_competition_to_start(self, competition_pk):
     channel_layer = get_channel_layer()
 
-    id_ = f"QUIZ-{competition_pk}-LOCK"
+    # id_ = f"QUIZ-{competition_pk}-LOCK"
 
-    acquired = memcache_lock(id_, self.app.oid)
+    # acquired = memcache_lock(id_, self.app.oid)
 
-    if not acquired:
-        logging.warning(f"Could not acquire process lock at {self.name}")
-        return
+    # if not acquired:
+    #     logging.warning(f"Could not acquire process lock at {self.name}")
+    #     return
 
     try:
         competition: Competition = Competition.objects.get(pk=competition_pk)
