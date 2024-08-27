@@ -10,8 +10,12 @@ from channels.db import database_sync_to_async
 def get_user_from_basic_auth(tk: str):
     try:
         token = Token.objects.filter(key=tk).first()
+        print(token, token and token.user)
 
-        return token.user if token is not None else AnonymousUser()
+        if token is None:
+            return AnonymousUser()
+        
+        return token.user
     except Exception:
         return AnonymousUser()
 
