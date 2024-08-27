@@ -1,28 +1,10 @@
 name: "wits"
 
 services:
-  beat:
-    restart: always
-    build: .
-    command: celery -A witswin beat -S redbeat.RedBeatScheduler --loglevel=info
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - REDIS_URL=redis://redis:6379
-      
-    volumes:
-      - ./src/:/usr/src/app
-    depends_on:
-      - app
-      - redis
-
-    networks:
-      - base
 
   celery:
     build: .
-    restart: always
-    command: celery -A witswin worker --loglevel=info
+    command: celery -A witswin worker --beat --concurrency 1 -l INFO 
     volumes:
       - ./src/:/usr/src/app
     depends_on:

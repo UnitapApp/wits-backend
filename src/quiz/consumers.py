@@ -6,6 +6,7 @@ from channels.generic.websocket import (
 from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.db.models import Q, Count
+from authentication.models import UserProfile
 from quiz.serializers import CompetitionSerializer, QuestionSerializer, UserAnswerSerializer
 from quiz.utils import get_quiz_question_state, is_user_eligible_to_participate
 from djangorestframework_camel_case.render import CamelCaseJSONRenderer
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class QuizConsumer(AsyncJsonWebsocketConsumer):
     user_competition: UserCompetition
+    user_profile: UserProfile
 
     async def send_json(self, content, close=False):
         """
@@ -200,7 +202,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         if self.competition.start_at > timezone.now():
             await self.send_json({"type": "idle", "message": "wait for quiz to start"})
 
-        if await database_sync_to_async(lambda: self.competition.is_in_progress)():
+        elif await database_sync_to_async(lambda: self.competition.is_in_progress)():
             await self.send_json(await self.get_current_question())
         else:
             await self.finish_quiz(None)
@@ -251,7 +253,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                     data["args"]["selected_choice_id"],
                 )
 
-                await self.send_json({ "type": "ANSWER_ADD", "data": {**res, "is_eligible": res["is_correct"], "competition": await self.get_competition_stats()} })
+                await self.send_json({ "type": "add_answer", "data": {**res, "is_eligible": res["is_correct"], "question_id": data['args']['question_id']} })
 
         except Exception as e:
             logger.warn(e)
