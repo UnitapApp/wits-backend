@@ -155,7 +155,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 "total_participants_count": self.competition.participants.count(),
                 "questions_count": self.competition.questions.count(),
                 "hint_count": int(not self.user_competition.is_hint_used) if self.user_competition else 0,
-                "previous_round_losses": min(self.get_round_participants(users_participated, question_number - 1) - participating_count, 0)
+                "previous_round_losses": max(self.get_round_participants(users_participated, question_number - 1) - participating_count, 0)
             },
         }
 
