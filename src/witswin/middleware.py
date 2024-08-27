@@ -29,10 +29,14 @@ class BasicTokenHeaderAuthentication:
 
         headers = dict(scope["headers"])
         cookie = SimpleCookie()
+
+        if not headers.get(b'cookie'):
+            return AnonymousUser()
+
         cookie.load(str(headers[b'cookie']))
         print(cookie.keys())
         if "userToken" in cookie.keys():
-            scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value) # type: ignore
+            scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
         else:
             scope["user"] = AnonymousUser()
 

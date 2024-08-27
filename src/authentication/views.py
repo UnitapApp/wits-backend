@@ -64,11 +64,11 @@ class AuthenticateView(CreateAPIView):
         response = Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
         response.set_cookie(
-            key='userToken',  
+            key='ws_session',  
             value=token.key,
             httponly=True,
             secure=True,
-            domain='.wits.win'
+            domain='api.wits.win'
         )
 
 

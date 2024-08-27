@@ -53,7 +53,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def resolve_user(self):
-        return self.scope['user'].profile
+        if hasattr(self.scope['user'], "profile"):
+            return self.scope['user'].profile
+        return None
 
     @database_sync_to_async
     def resolve_user_competition(self):
