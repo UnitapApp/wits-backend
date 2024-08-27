@@ -70,4 +70,7 @@ class AuthenticateView(CreateAPIView):
             secure=True,
             samesite='Lax'
         )
+
+
+        return response
         
