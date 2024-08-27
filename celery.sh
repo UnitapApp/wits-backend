@@ -1,3 +1,3 @@
 #!/bin/sh
 
-celery -A witswin worker --beat -l INFO
+celery -A witswin worker --beat --concurrency 1 -l INFO 
