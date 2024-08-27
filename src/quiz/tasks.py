@@ -56,7 +56,7 @@ def evaluate_state(competition: Competition, channel_layer):
 
         winners.update(
             is_winner=True,
-            amount_won=amount_win / winners_count
+            amount_won=amount_win / winners_count if winners_count > 0 else 0
         )
 
         async_to_sync(channel_layer.group_send)(  # type: ignore
