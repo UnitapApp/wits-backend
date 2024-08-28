@@ -9,7 +9,6 @@ from channels.db import database_sync_to_async
 @database_sync_to_async
 def get_user_from_basic_auth(tk: str):
     try:
-        print(tk)
         token = Token.objects.filter(key=tk.strip().replace("'", '')).first()
 
         if token is None:
@@ -37,11 +36,8 @@ class BasicTokenHeaderAuthentication:
         if not headers.get(b'cookie'):
             return AnonymousUser()
 
-        print(headers[b'cookie'])
         cookie.load(headers[b'cookie'].decode("utf-8"))
-        print(cookie.items())
         if "userToken" in cookie.keys() or "ws_session" in cookie.keys():
-            print(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
             scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
         else:
             scope["user"] = AnonymousUser()
