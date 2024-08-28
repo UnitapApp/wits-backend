@@ -247,15 +247,18 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json({ "type": "hint_question", "data": hint_choices, 'question_id': data['args']['question_id'] })
 
             if command == "ANSWER":
-                if not await self.is_user_eligible_to_participate():
+                is_eligible = await self.is_user_eligible_to_participate()
+
+                if is_eligible is False:
                     return
 
-                res = await self.save_answer(
-                    data["args"]["question_id"],
-                    data["args"]["selected_choice_id"],
+                res = await self.save_answer( # TODO: parse parameters with django camel case
+                    data["args"]["questionId"],
+                    data["args"]["selectedChoiceId"],
                 )
 
-                await self.send_json({ "type": "add_answer", "data": {**res, "is_eligible": res["is_correct"], "question_id": data['args']['question_id']} })
+
+                await self.send_json({ "type": "add_answer", "data": {**res, "is_eligible": res["is_correct"], "question_id": data['args']['questionId']} })
 
         except Exception as e:
             logger.warn(e)
@@ -273,7 +276,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def save_answer(self, question_id, selected_choice_id):
-        question = Question.objects.can_be_shown.get(pk=question_id)
+        question: Question = Question.objects.can_be_shown.get(pk=question_id)
         selected_choice = Choice.objects.get(pk=selected_choice_id)
         user_competition = self.user_competition
 
@@ -284,9 +287,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         )
 
         return {
-            "type": "submit_answer_result",
-            "answer": {
-                "is_correct": selected_choice.is_correct,
-                "answer": UserAnswerSerializer(instance=answer, context={ "create": True }).data,
-            }
+            "is_correct": selected_choice.is_correct,
+            "answer": UserAnswerSerializer(instance=answer, context={ "create": True }).data,
+            "question_number": question.number
         }
