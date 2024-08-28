@@ -21,4 +21,4 @@ def trigger_competition_starter_task(sender, instance: Competition, created, **k
         args=[instance.pk],
         eta=start_time - timezone.timedelta(seconds=10),
         task_id=f"start_competition_{instance.pk}",
-    )
+    ) # type: ignore

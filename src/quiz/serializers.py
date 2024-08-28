@@ -146,6 +146,13 @@ class UserCompetitionSerializer(serializers.ModelSerializer):
             "tx_hash"
         ]
 
+    def create(self, validated_data):
+        competition = validated_data.get('competition')
+        
+        validated_data['hint_count'] = competition.hint_count
+        
+        return super().create(validated_data)
+
 
 class UserCompetitionField(serializers.PrimaryKeyRelatedField):
     def to_representation(self, value):
