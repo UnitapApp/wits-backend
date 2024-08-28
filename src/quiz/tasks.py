@@ -29,6 +29,7 @@ def handle_quiz_end(competition: Competition):
 
 
 def evaluate_state(competition: Competition, channel_layer):
+
     question_state = get_quiz_question_state(competition)
 
     logger.warning(f"sending broadcast question {question_state}.")
@@ -69,26 +70,20 @@ def evaluate_state(competition: Competition, channel_layer):
 
     data = QuestionSerializer(instance=question).data
 
+
     async_to_sync(channel_layer.group_send)(  # type: ignore
         f"quiz_{competition.pk}",
         {"type": "send_question", "data": json.dumps(data, cls=DjangoJSONEncoder)},
     )
 
-    start_time = time.monotonic()  # Record the start time
-
     time.sleep(ANSWER_TIME_SECOND)
-
-    elapsed_time = time.monotonic() - start_time  # Calculate the elapsed time
 
     async_to_sync(channel_layer.group_send)(  # type: ignore
         f"quiz_{competition.pk}",
         {"type": "send_quiz_stats", "data": ""},
     )
 
-    # Adjust rest time by subtracting the elapsed time from it
-    rest_time = max(0, REST_BETWEEN_EACH_QUESTION_SECOND - elapsed_time)
-
-    return rest_time
+    return REST_BETWEEN_EACH_QUESTION_SECOND
 
 
 @shared_task(bind=True)
@@ -108,17 +103,11 @@ def setup_competition_to_start(self, competition_pk):
 
     while state != "FINISHED" or rest_still > 0:
         time.sleep(rest_still)
-
-        start_time = time.monotonic()  # Record the start time before evaluating the state
         rest_still = evaluate_state(competition, channel_layer)
-        elapsed_time = time.monotonic() - start_time  # Calculate the elapsed time
 
         if rest_still == -1:
             state = "FINISHED"
             break
-
-        # Adjust the rest time by subtracting the elapsed time from it
-        rest_still = max(0, rest_still - elapsed_time)
 
     time.sleep(2)
     async_to_sync(channel_layer.group_send)(  # type: ignore
