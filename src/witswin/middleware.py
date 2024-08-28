@@ -9,6 +9,7 @@ from channels.db import database_sync_to_async
 @database_sync_to_async
 def get_user_from_basic_auth(tk: str):
     try:
+        print(tk)
         token = Token.objects.filter(key=tk.strip().replace("'", '')).first()
 
         if token is None:
