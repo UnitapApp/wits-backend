@@ -31,7 +31,7 @@ def is_user_eligible_to_participate(
 
     question_number = user_competition.users_answer.count()
 
-    state = get_quiz_question_state(competition)
+    state = get_quiz_question_state(competition) - 1
 
     if state > question_number:
         return False
