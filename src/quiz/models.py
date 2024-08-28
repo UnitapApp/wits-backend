@@ -93,6 +93,7 @@ class Competition(models.Model):
 
     objects: CompetitionManager = CompetitionManager()
     questions: models.QuerySet
+    hint_count = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return f"{self.user_profile} - {self.title}"
@@ -138,8 +139,8 @@ class UserCompetition(models.Model):
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     is_winner = models.BooleanField(default=False)
     amount_won = BigNumField(default=0)
-    is_hint_used = models.BooleanField(default=False)
-
+    hint_count = models.PositiveIntegerField(default=0)
+    tx_hash = models.CharField(max_length=1000, blank=True)
     users_answer: models.QuerySet
 
     class Meta:

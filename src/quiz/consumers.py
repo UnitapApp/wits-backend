@@ -66,12 +66,12 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         
         user_competition = self.user_competition
         
-        if not user_competition or user_competition.is_hint_used:
+        if not user_competition or user_competition.hint_count <= 0:
             return
         
         question: Question = Question.objects.get(pk=question_id, competition=self.competition)
 
-        user_competition.is_hint_used = True
+        user_competition.hint_count -= 1
         user_competition.save()
 
         return list(question.choices.filter(is_hinted_choice=True).values_list('pk', flat=True))
@@ -136,7 +136,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             competition=self.competition
         )
 
-        question_number = get_quiz_question_state(self.competition) + 1
+        question_number = get_quiz_question_state(self.competition)
 
         if self.competition.can_be_shown:
             users_participating = users_participated.annotate(
@@ -156,7 +156,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 "prize_to_win": prize_to_win / participating_count if participating_count > 0 else 0,
                 "total_participants_count": self.competition.participants.count(),
                 "questions_count": self.competition.questions.count(),
-                "hint_count": int(not self.user_competition.is_hint_used) if self.user_competition else 0,
+                "hint_count": self.user_competition.hint_count if self.user_competition else 0,
                 "previous_round_losses": max(self.get_round_participants(users_participated, question_number - 1) - participating_count, 0)
             },
         }
@@ -169,7 +169,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         if now < competition_time:
             return {"error": "wait for competition to begin", "data": None}
 
-        state = (await database_sync_to_async(get_quiz_question_state)(competition=self.competition)) + 1
+        state = (await database_sync_to_async(get_quiz_question_state)(competition=self.competition))
 
         question = await self.get_question(state)
 

@@ -19,6 +19,7 @@ class SmallQuestionSerializer(serializers.ModelSerializer):
 class CompetitionSerializer(serializers.ModelSerializer):
     questions = SmallQuestionSerializer(many=True, read_only=True)
     sponsors = SponsorSerializer(many=True, read_only=True)
+    participants_count = serializers.IntegerField(source='participants.count', read_only=True)
 
     class Meta:
         model = Competition
@@ -142,6 +143,7 @@ class UserCompetitionSerializer(serializers.ModelSerializer):
             "user_profile",
             "is_winner",
             "amount_won",
+            "tx_hash"
         ]
 
 

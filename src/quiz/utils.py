@@ -55,4 +55,4 @@ def get_quiz_question_state(competition: Competition):
     return min(math.floor(
         (timezone.now() - start_at).seconds
         / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-    ), competition.questions.count() - 1)
+    ), competition.questions.count())

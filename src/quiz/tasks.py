@@ -29,7 +29,7 @@ def handle_quiz_end(competition: Competition):
 
 def evaluate_state(competition: Competition, channel_layer):
 
-    question_state = get_quiz_question_state(competition) + 1
+    question_state = get_quiz_question_state(competition)
 
     logger.warning(f"sending broadcast question {question_state}.")
 
@@ -38,7 +38,7 @@ def evaluate_state(competition: Competition, channel_layer):
         logger.warning(f"no more questions remaining, broadcast quiz finished.")
 
         logger.info("calculating results")
-        question_number = get_quiz_question_state(competition) + 1
+        question_number = get_quiz_question_state(competition)
 
         users_participated = UserCompetition.objects.filter(
             competition=competition
