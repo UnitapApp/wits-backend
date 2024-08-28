@@ -38,7 +38,7 @@ class BasicTokenHeaderAuthentication:
             return AnonymousUser()
 
         print(headers[b'cookie'])
-        cookie.load(str(headers[b'cookie']))
+        cookie.load(headers[b'cookie'].decode("utf-8"))
         print(cookie.items())
         if "userToken" in cookie.keys() or "ws_session" in cookie.keys():
             print(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
