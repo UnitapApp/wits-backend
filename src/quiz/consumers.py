@@ -108,7 +108,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             competition__pk=self.competition_id, number=index
         ).first()
 
-        return QuestionSerializer(instance=instance).data
+        data: Any = QuestionSerializer(instance=instance).data
+
+        return {**data, "is_eligible": is_user_eligible_to_participate(self.user_profile, self.competition)}
 
     @database_sync_to_async
     def is_user_eligible_to_participate(self):
