@@ -39,6 +39,7 @@ class BasicTokenHeaderAuthentication:
 
         print(headers[b'cookie'])
         cookie.load(str(headers[b'cookie']))
+        print(cookie.items())
         if "userToken" in cookie.keys() or "ws_session" in cookie.keys():
             print(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
             scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
