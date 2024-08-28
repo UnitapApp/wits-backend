@@ -18,7 +18,7 @@ from quiz.serializers import QuestionSerializer
 import logging
 import math
 
-from quiz.utils import get_quiz_question_state
+from quiz.utils import get_quiz_question_state, is_competition_finsihed
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def evaluate_state(competition: Competition, channel_layer):
 
     logger.warning(f"sending broadcast question {question_state}.")
 
-    if question_state > competition.questions.count():
+    if is_competition_finsihed(competition):
         handle_quiz_end(competition)
         logger.warning(f"no more questions remaining, broadcast quiz finished.")
 

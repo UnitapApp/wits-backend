@@ -56,3 +56,21 @@ def get_quiz_question_state(competition: Competition):
         (timezone.now() - start_at).seconds
         / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
     ) + 1, competition.questions.count())
+
+
+def is_competition_finsihed(competition: Competition):
+    start_at = competition.start_at
+
+    if timezone.is_naive(start_at):
+        start_at = timezone.make_aware(start_at, timezone.get_current_timezone())
+    else:
+        start_at = start_at.astimezone(timezone.get_current_timezone())
+
+    if start_at > timezone.now():
+        return False
+    
+    return math.floor(
+        (timezone.now() - start_at).seconds
+        / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+    ) + 1 > competition.questions.count()
+    
