@@ -36,7 +36,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         
         answers = UserAnswer.objects.filter(user_competition__competition=self.competition, user_competition__user_profile=self.user_profile)
 
-        diff = get_quiz_question_state(self.competition) - answers.count()
+        diff = get_quiz_question_state(self.competition) - 1 - answers.count()
         missed_answers = []
 
         if diff > 0:
