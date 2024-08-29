@@ -110,7 +110,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
         data: Any = QuestionSerializer(instance=instance).data
 
-        return {**data, "is_eligible": is_user_eligible_to_participate(self.user_profile, self.competition)}
+        return {"question": {**data, "is_eligible": is_user_eligible_to_participate(self.user_profile, self.competition)}, "type": "new_question"}
 
     @database_sync_to_async
     def is_user_eligible_to_participate(self):
@@ -175,7 +175,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
         question = await self.get_question(state)
 
-        return {"question": question, "type": "new_question"}
+        return question
     
     @database_sync_to_async
     def get_competition_stats(self) -> Any:
@@ -257,17 +257,10 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                     data["args"]["selectedChoiceId"],
                 )
 
-
                 await self.send_json({ "type": "add_answer", "data": {**res, "is_eligible": res["is_correct"], "question_id": data['args']['questionId']} })
 
         except Exception as e:
             logger.warn(e)
-        # if not self.channel_layer:
-        #     return
-
-        # await self.channel_layer.group_send(
-        #     self.competition_group_name, {"type": "quiz_message", "message": data}
-        # )
 
     async def quiz_message(self, event):
         message = event["message"]
@@ -277,17 +270,23 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def save_answer(self, question_id, selected_choice_id):
         question: Question = Question.objects.can_be_shown.get(pk=question_id)
-        selected_choice = Choice.objects.get(pk=selected_choice_id)
+        selected_choice = Choice.objects.filter(pk=selected_choice_id).first()
         user_competition = self.user_competition
 
         answer = UserAnswer.objects.create(
             user_competition=user_competition,
             question=question,
-            selected_choice=selected_choice,
+            selected_choice_id=selected_choice_id,
         )
 
+        if selected_choice and selected_choice.is_correct is True:
+            correct_choice = selected_choice_id
+        else:
+            correct_choice = Choice.objects.filter(question=question, is_correct=True).first().pk
+
         return {
-            "is_correct": selected_choice.is_correct,
+            "is_correct": selected_choice.is_correct if selected_choice else False,
             "answer": UserAnswerSerializer(instance=answer, context={ "create": True }).data,
-            "question_number": question.number
+            "question_number": question.number,
+            "correct_choice": correct_choice
         }

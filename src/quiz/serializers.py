@@ -1,3 +1,5 @@
+import random
+
 from rest_framework import serializers
 
 from quiz.models import Choice, Competition, Question, Sponsor, UserAnswer, UserCompetition
@@ -43,8 +45,7 @@ class ChoiceSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    # competition = CompetitionSerializer()
-    choices = ChoiceSerializer(many=True)
+    choices = serializers.SerializerMethodField()
     remain_participants_count = serializers.SerializerMethodField(read_only=True)
     total_participants_count = serializers.SerializerMethodField(read_only=True)
     amount_won_per_user = serializers.SerializerMethodField(read_only=True)
@@ -54,6 +55,11 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = "__all__"
 
+    def get_choices(self, obj: Question):
+        choices_data = ChoiceSerializer(obj.choices.all(), many=True).data
+        if obj.competition.shuffle_answers:
+            random.shuffle(choices_data)
+        return choices_data
 
     def get_is_eligible(self, ques: Question):
         if self.context.get("request"):

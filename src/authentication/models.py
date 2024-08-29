@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, RegexValidator
+from cloudflare_images.field import CloudflareImagesField
 
 
 class UserProfile(models.Model):
@@ -19,6 +20,7 @@ class UserProfile(models.Model):
     )
     wallet_address = models.CharField(max_length=512, db_index=True, unique=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    image = CloudflareImagesField(variant="public", null=True, blank=True)
 
     def __str__(self) -> str:
         return self.username or self.wallet_address

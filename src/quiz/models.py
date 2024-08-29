@@ -6,7 +6,9 @@ from django.utils import timezone
 from django.db.models import F, Count
 from authentication.models import UserProfile
 from .constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
-from core.fields import BigNumField, CloudflareImagesField
+from core.fields import BigNumField
+from cloudflare_images.field import CloudflareImagesField
+
 
 
 class Sponsor(models.Model):
@@ -80,6 +82,7 @@ class Competition(models.Model):
     telegram_url = models.URLField(max_length=255, null=True, blank=True)
     token_image = CloudflareImagesField(blank=True, null=True)
     image = CloudflareImagesField(blank=True, null=True)
+    shuffle_answers = models.BooleanField(default=False)
 
     participants = models.ManyToManyField(
         UserProfile,
@@ -244,5 +247,5 @@ class UserAnswer(models.Model):
     def __str__(self):
         return (
             f"{self.user_competition.user_profile} "
-            f"- {self.user_competition.competition.title}  - {self.question.number}"
+            f"- {self.user_competition.competition.title} - {self.question.number}"
         )
