@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 def handle_quiz_end(competition: Competition, winners: list[str], amount):
     manager = ContractManager()
 
-    tx = manager.distribute(winners, [amount for i in winners])
+    win_amount = amount * (10 ** competition.token_decimals)
+
+    tx = manager.distribute(winners, [win_amount for i in winners])
 
     logger.info("tx hash for winners distribution", tx)
 
