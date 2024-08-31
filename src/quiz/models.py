@@ -72,7 +72,7 @@ class Competition(models.Model):
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     start_at = models.DateTimeField(null=False, blank=False)
-    prize_amount = BigNumField(null=False, blank=False)
+    prize_amount = models.FloatField(null=False, blank=False)
     chain_id = models.IntegerField()
     token = models.CharField(max_length=100)
     token_address = models.CharField(max_length=255)
