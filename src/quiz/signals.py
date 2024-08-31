@@ -8,6 +8,8 @@ from quiz.tasks import setup_competition_to_start
 
 @receiver(post_save, sender=Competition)
 def trigger_competition_starter_task(sender, instance: Competition, created, **kwargs):
+    if instance.is_active:
+        return
 
     start_time = instance.start_at
 
