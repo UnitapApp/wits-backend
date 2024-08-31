@@ -43,6 +43,8 @@ IMAGE_DELIVERY_URL = os.environ.get("IMAGE_DELIVERY_URL")
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379")
 
+OP_MAINNET_RPC_URL = os.environ.get("OP_MAINNET_RPC_URL", "https://mainnet.optimism.io")
+OPTIMISM_DISTRIBUTOR_PRIVATE_KEY = os.environ.get("OPTIMISM_DISTRIBUTOR_PRIVATE_KEY")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -158,8 +160,15 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+STORAGES = {
+    "default": { 
+        "BACKEND": "cloudflare_images.storage.CloudflareImagesStorage",
+    },
+    "staticfiles": { 
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type
@@ -229,3 +238,5 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = os.environ.get(
     "CELERY_BEAT_SCHEDULER", default="django_celery_beat.schedulers.DatabaseScheduler"
 )
+
+

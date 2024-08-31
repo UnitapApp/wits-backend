@@ -1,19 +1,17 @@
-from datetime import timedelta
 import json
 import time
 
 from celery import shared_task
-from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, Q
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from core.utils import memcache_lock
 from quiz.constants import (
     ANSWER_TIME_SECOND,
     REST_BETWEEN_EACH_QUESTION_SECOND,
 )
+from quiz.contracts import ContractManager
 from quiz.models import Competition, Question, UserCompetition
 from quiz.serializers import QuestionSerializer
 import logging
@@ -24,7 +22,17 @@ from quiz.utils import get_quiz_question_state, is_competition_finsihed
 logger = logging.getLogger(__name__)
 
 
-def handle_quiz_end(competition: Competition):
+def handle_quiz_end(competition: Competition, winners: list[str], amount):
+    manager = ContractManager()
+
+    tx = manager.distribute(winners, [amount for i in winners])
+
+    logger.info("tx hash for winners distribution", tx)
+
+    return tx
+
+
+def check_competition_state(competition: Competition):
     pass
 
 
@@ -35,7 +43,6 @@ def evaluate_state(competition: Competition, channel_layer):
     logger.warning(f"sending broadcast question {question_state}.")
 
     if is_competition_finsihed(competition):
-        handle_quiz_end(competition)
         logger.warning(f"no more questions remaining, broadcast quiz finished.")
 
         logger.info("calculating results")
@@ -55,10 +62,15 @@ def evaluate_state(competition: Competition, channel_layer):
 
         amount_win = competition.prize_amount
 
+        win_amount = amount_win / winners_count if winners_count > 0 else 0
+
         winners.update(
             is_winner=True,
-            amount_won=amount_win / winners_count if winners_count > 0 else 0
+            amount_won=win_amount
         )
+        
+        if win_amount:
+            handle_quiz_end(competition, list(winners.values_list("user_profile__wallet_address", flat=True)), win_amount)
 
         async_to_sync(channel_layer.group_send)(  # type: ignore
             f"quiz_{competition.pk}",
