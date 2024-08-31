@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def handle_quiz_end(competition: Competition, winners: list[str], amount):
     manager = ContractManager()
 
-    win_amount = amount * (10 ** competition.token_decimals)
+    win_amount = amount
 
     tx = manager.distribute(winners, [win_amount for i in winners])
 
