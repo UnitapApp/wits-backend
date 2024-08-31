@@ -1,3 +1,4 @@
+from statistics import median
 import web3
 import logging
 
@@ -31,23 +32,23 @@ class ContractManager:
         
         self.account = Account.from_key(private_key or settings.OPTIMISM_DISTRIBUTOR_PRIVATE_KEY)
     
-    def estimate_gas(self, tx):
-        return web3.eth.estimate_gas(tx)
+    def estimate_gas(self):
+        block = self.instance.eth.get_block("latest", full_transactions=True)
+
+        return int(median(t.gas for t in block.transactions))
 
     def distribute(self, addresses, amounts):
         distribute = self.contract.functions.distribute(addresses, amounts)
-        gas = distribute.estimate_gas()
 
-        transaction = self.contract.functions.distribute(addresses, amounts).build_transaction({
-            'chianId': 10,
-            'gas': gas,
-            'gasPrice': self.instance.to_wei('0.001', 'gwei'),
+        transaction = distribute.build_transaction({
+            'gas': self.estimate_gas(),
+            'gasPrice': self.instance.eth.gas_price,
             'nonce': self.instance.eth.get_transaction_count(self.account.address),
         })
 
         signed_tx = self.instance.eth.account.sign_transaction(transaction, private_key=self.private_key)
 
-        txn_hash = self.instance.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_hash = self.instance.eth.send_raw_transaction(signed_tx.raw_transaction)
 
         txn_receipt = self.instance.eth.wait_for_transaction_receipt(txn_hash)
 
