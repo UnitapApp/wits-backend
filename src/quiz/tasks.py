@@ -39,6 +39,8 @@ def handle_quiz_end(competition: Competition, winners: list[str], amount):
 
     logger.info("tx hash for winners distribution", tx)
 
+
+    channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(  # type: ignore
         f"quiz_{competition.pk}",
         {"type": "finish_quiz", "data": {  }},
