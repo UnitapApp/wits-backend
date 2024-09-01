@@ -113,6 +113,18 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         return {"question": {**data, "is_eligible": is_user_eligible_to_participate(self.user_profile, self.competition)}, "type": "new_question"}
 
     @database_sync_to_async
+    def get_question_with_pk(self, index: int):
+        instance = Question.objects.can_be_shown.filter(
+            competition__pk=self.competition_id, pk=index
+        ).first()
+
+        data: Any = QuestionSerializer(instance=instance).data
+
+        return {"question": {**data, "is_eligible": is_user_eligible_to_participate(self.user_profile, self.competition)}, "type": "new_question"}
+    
+
+
+    @database_sync_to_async
     def is_user_eligible_to_participate(self):
         return is_user_eligible_to_participate(
             user_profile=self.user_profile, competition=self.competition
@@ -239,7 +251,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json(await self.get_quiz_stats())
 
             if command == "GET_QUESTION":
-                await self.send_json(await self.get_question(data["args"]["index"]))
+                await self.send_json(await self.get_question_with_pk(data["args"]["index"]))
 
             if command == "GET_HINT":
                 hint_choices = await self.send_hint_question(data['args']['question_id'])
