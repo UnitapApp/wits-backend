@@ -94,7 +94,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def calculate_quiz_winners(self):
-        return list(UserCompetition.objects.filter(is_winner=True).values("user_profile__wallet_address", "tx_hash"))
+        return list(UserCompetition.objects.filter(is_winner=True).values("user_profile__wallet_address", "tx_hash").distinct())
 
     async def finish_quiz(self, event):
 
