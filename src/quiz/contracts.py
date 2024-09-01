@@ -17,6 +17,9 @@ wits_contract_abi = [{"inputs":[],"name":"AccessControlBadConfirmation","type":"
 wits_contract_address = "0x1042a37E7E0Fc24adCFbbF82919Da8631003b9D1"
 
 
+class SafeContractException(Exception):
+    pass
+
 
 class ContractManager:
     def __init__(self, address=None, private_key=None, abi=None) -> None:
@@ -25,10 +28,10 @@ class ContractManager:
         self.private_key = private_key or settings.OPTIMISM_DISTRIBUTOR_PRIVATE_KEY
 
         if self.instance.is_connected() is False:
-            raise Exception("instance must be connected")
+            raise SafeContractException("instance must be connected")
 
         if not settings.OPTIMISM_DISTRIBUTOR_PRIVATE_KEY:
-            raise Exception("Optimism private key must be present") 
+            raise SafeContractException("Optimism private key must be present") 
         
         self.account = Account.from_key(private_key or settings.OPTIMISM_DISTRIBUTOR_PRIVATE_KEY)
     
@@ -52,4 +55,4 @@ class ContractManager:
 
         txn_receipt = self.instance.eth.wait_for_transaction_receipt(txn_hash)
 
-        return txn_receipt
+        return txn_hash

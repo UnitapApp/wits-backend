@@ -11,7 +11,7 @@ from quiz.constants import (
     ANSWER_TIME_SECOND,
     REST_BETWEEN_EACH_QUESTION_SECOND,
 )
-from quiz.contracts import ContractManager
+from quiz.contracts import ContractManager, SafeContractException
 from quiz.models import Competition, Question, UserCompetition
 from quiz.serializers import QuestionSerializer
 import logging
@@ -21,15 +21,28 @@ from quiz.utils import get_quiz_question_state, is_competition_finsihed
 
 logger = logging.getLogger(__name__)
 
-
+@shared_task()
 def handle_quiz_end(competition: Competition, winners: list[str], amount):
     manager = ContractManager()
 
     win_amount = int(amount)
 
-    tx = manager.distribute(winners, [win_amount for i in winners])
+    try:
+        tx = manager.distribute(winners, [win_amount for i in winners])
+    except SafeContractException as e:
+        handle_quiz_end.delay(competition, winners, amount)
+        raise e
+
+    competition.tx_hash = str(tx)
+
+    competition.save()
 
     logger.info("tx hash for winners distribution", tx)
+
+    async_to_sync(channel_layer.group_send)(  # type: ignore
+        f"quiz_{competition.pk}",
+        {"type": "finish_quiz", "data": {  }},
+    )
 
     return tx
 
@@ -74,10 +87,7 @@ def evaluate_state(competition: Competition, channel_layer):
         if win_amount:
             handle_quiz_end(competition, list(winners.values_list("user_profile__wallet_address", flat=True)), win_amount)
 
-        async_to_sync(channel_layer.group_send)(  # type: ignore
-            f"quiz_{competition.pk}",
-            {"type": "finish_quiz", "data": {  }},
-        )
+
         return -1
 
     question = Question.objects.get(competition=competition, number=question_state)
