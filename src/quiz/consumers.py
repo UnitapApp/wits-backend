@@ -123,7 +123,7 @@ class QuizConsumer(BaseJsonConsumer):
 
     @database_sync_to_async
     def resolve_user_competition(self):
-        return UserCompetition.objects.get(user_profile=self.user_profile, competition=self.competition)
+        return UserCompetition.objects.filter(user_profile=self.user_profile, competition=self.competition).first()
     
     @database_sync_to_async
     def send_hint_question(self, question_id):
@@ -155,7 +155,7 @@ class QuizConsumer(BaseJsonConsumer):
 
     @database_sync_to_async
     def calculate_quiz_winners(self):
-        return list(UserCompetition.objects.filter(is_winner=True).values("user_profile__wallet_address", "tx_hash").distinct())
+        return list(UserCompetition.objects.filter(is_winner=True, competition=self.competition).values("user_profile__wallet_address", "tx_hash").distinct())
 
     async def finish_quiz(self, event):
 
@@ -211,7 +211,7 @@ class QuizConsumer(BaseJsonConsumer):
             competition=self.competition
         )
 
-        question_number = get_quiz_question_state(self.competition)
+        question_number = get_quiz_question_state(self.competition) - 1
 
         if self.competition.can_be_shown:
             users_participating = users_participated.annotate(

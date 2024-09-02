@@ -38,12 +38,6 @@ def handle_quiz_end(competition: Competition, winners: list[str], amount):
 
     logger.info("tx hash for winners distribution", tx)
 
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(  # type: ignore
-        f"quiz_{competition.pk}",
-        {"type": "finish_quiz", "data": {}},
-    )
-
     return tx
 
 
@@ -70,7 +64,9 @@ def evaluate_state(competition: Competition, channel_layer, question_state):
                     filter=Q(users_answer__selected_choice__is_correct=True),
                 )
             )
-            .filter(correct_answer_count__gte=question_number)
+            .filter(
+                correct_answer_count__gte=question_number,
+            )
             .distinct()
         )
 
@@ -88,6 +84,15 @@ def evaluate_state(competition: Competition, channel_layer, question_state):
                 list(winners.values_list("user_profile__wallet_address", flat=True)),
                 win_amount,
             )
+        else:
+            competition.tx_hash = "0x00"
+            competition.save()
+
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(  # type: ignore
+            f"quiz_{competition.pk}",
+            {"type": "finish_quiz", "data": {}},
+        )
 
         return -1
 
