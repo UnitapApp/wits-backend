@@ -1,3 +1,4 @@
+from typing import Any
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 
@@ -13,6 +14,9 @@ from quiz.serializers import (
     UserAnswerSerializer,
     UserCompetitionSerializer,
 )
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 
 
 class CompetitionViewList(ListAPIView):
@@ -39,9 +43,19 @@ class EnrollInCompetitionView(ListCreateAPIView):
     queryset = UserCompetition.objects.all()
     serializer_class = UserCompetitionSerializer
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: UserCompetitionSerializer):
         user = self.request.user.profile # type: ignore
         serializer.save(user_profile=user)
+
+        competition: Any = serializer.validated_data.get("competition") 
+
+        channel_layer = get_channel_layer()
+
+        async_to_sync(channel_layer.group_send)(  # type: ignore
+            f"quiz_list",
+            {"type": "increase_enrollment", "data": competition.id},
+        )
+
 
     def get_queryset(self):
         return self.queryset.filter(user_profile=self.request.user.profile) # type:ignore
