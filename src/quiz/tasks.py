@@ -32,8 +32,8 @@ def handle_quiz_end(competition: Competition, winners: list[str], amount):
     except SafeContractException as e:
         handle_quiz_end.delay(competition, winners, amount)
         raise e
-
-    competition.tx_hash = str(tx)
+    
+    competition.tx_hash = str(tx.hex())
 
     competition.save()
 
@@ -53,13 +53,11 @@ def check_competition_state(competition: Competition):
     pass
 
 
-def evaluate_state(competition: Competition, channel_layer):
-
-    question_state = get_quiz_question_state(competition)
+def evaluate_state(competition: Competition, channel_layer, question_state):
 
     logger.warning(f"sending broadcast question {question_state}.")
 
-    if is_competition_finsihed(competition):
+    if competition.questions.count() < question_state:
         logger.warning(f"no more questions remaining, broadcast quiz finished.")
 
         logger.info("calculating results")
@@ -124,13 +122,14 @@ def setup_competition_to_start(self, competition_pk):
 
     state = "IDLE"
 
-    rest_still = (competition.start_at - timezone.now()).total_seconds()
+    rest_still = (competition.start_at - timezone.now()).total_seconds() - 1
+    question_index = 1
     logger.warning(f"Resting {rest_still} seconds till the quiz begins and broadcast the questions.")
 
     while state != "FINISHED" or rest_still > 0:
         time.sleep(rest_still)
-        rest_still = evaluate_state(competition, channel_layer)
-
+        rest_still = evaluate_state(competition, channel_layer, question_index)
+        question_index += 1
         if rest_still == -1:
             state = "FINISHED"
             break
