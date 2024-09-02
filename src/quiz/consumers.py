@@ -123,7 +123,7 @@ class QuizConsumer(BaseJsonConsumer):
 
     @database_sync_to_async
     def resolve_user_competition(self):
-        return UserCompetition.objects.get(user_profile=self.user_profile, competition=self.competition)
+        return UserCompetition.objects.filter(user_profile=self.user_profile, competition=self.competition).first()
     
     @database_sync_to_async
     def send_hint_question(self, question_id):
