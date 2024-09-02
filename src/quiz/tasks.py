@@ -24,15 +24,13 @@ logger = logging.getLogger(__name__)
 
 @shared_task()
 def handle_quiz_end(competition: Competition, winners: list[str], amount):
-    manager = ContractManager()
-
-    win_amount = int(amount)
-
     try:
+        manager = ContractManager()
+        win_amount = int(amount)
         tx = manager.distribute(winners, [win_amount for i in winners])
     except SafeContractException as e:
         handle_quiz_end.delay(competition, winners, amount)
-        return -1
+        raise e
 
     competition.tx_hash = str(tx.hex())
 
