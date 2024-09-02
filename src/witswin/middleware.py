@@ -6,14 +6,15 @@ from django.contrib.auth.models import AnonymousUser
 from rest_framework.authtoken.models import Token
 from channels.db import database_sync_to_async
 
+
 @database_sync_to_async
 def get_user_from_basic_auth(tk: str):
     try:
-        token = Token.objects.filter(key=tk.strip().replace("'", '')).first()
+        token = Token.objects.filter(key=tk.strip().replace("'", "")).first()
 
         if token is None:
             return AnonymousUser()
-        
+
         return token.user
     except Exception:
         return AnonymousUser()
@@ -33,12 +34,19 @@ class BasicTokenHeaderAuthentication:
         headers = dict(scope["headers"])
         cookie = SimpleCookie()
 
-        if not headers.get(b'cookie'):
+        query_params = scope["query_string"].decode("utf-8")
+
+        print(query_params)
+
+        if not headers.get(b"cookie"):
             return AnonymousUser()
 
-        cookie.load(headers[b'cookie'].decode("utf-8"))
+        cookie.load(headers[b"cookie"].decode("utf-8"))
         if "userToken" in cookie.keys() or "ws_session" in cookie.keys():
-            scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
+            scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value or cookie.get("ws_session").value)  # type: ignore
+
+        elif "auth" in query_params:
+            scope["user"] = await get_user_from_basic_auth(query_params.split("=")[1])
         else:
             scope["user"] = AnonymousUser()
 
