@@ -4,6 +4,7 @@ import core.fields
 import django.core.validators
 import django.db.models.deletion
 from django.db import migrations, models
+from cloudflare_images.field import CloudflareImagesField
 
 
 class Migration(migrations.Migration):
@@ -46,7 +47,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=255, unique=True)),
                 ('link', models.URLField(max_length=255)),
                 ('description', models.TextField(blank=True, null=True)),
-                ('image', core.fields.CloudflareImagesField(blank=True, null=True, upload_to='', variant='public')),
+                ('image', CloudflareImagesField(blank=True, null=True, upload_to='', variant='public')),
             ],
         ),
         migrations.CreateModel(

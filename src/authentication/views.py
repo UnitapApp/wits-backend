@@ -61,5 +61,17 @@ class AuthenticateView(CreateAPIView):
         
         data['token'] = token.key
         
-        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+        response = Response(data, status=status.HTTP_201_CREATED, headers=headers)
+
+        response.set_cookie(
+            key='userToken',  
+            value=token.key,
+            httponly=True,
+            secure=True,
+            domain=".wits.win",  # Set the cookie for all subdomains of wits.win
+            samesite="None"
+        )
+
+
+        return response
         

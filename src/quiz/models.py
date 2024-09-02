@@ -6,7 +6,9 @@ from django.utils import timezone
 from django.db.models import F, Count
 from authentication.models import UserProfile
 from .constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
-from core.fields import BigNumField, CloudflareImagesField
+from core.fields import BigNumField
+from cloudflare_images.field import CloudflareImagesField
+
 
 
 class Sponsor(models.Model):
@@ -72,6 +74,7 @@ class Competition(models.Model):
     start_at = models.DateTimeField(null=False, blank=False)
     prize_amount = BigNumField(null=False, blank=False)
     chain_id = models.IntegerField()
+    token_decimals = models.PositiveIntegerField(default=18)
     token = models.CharField(max_length=100)
     token_address = models.CharField(max_length=255)
     discord_url = models.URLField(max_length=255, null=True, blank=True)
@@ -80,19 +83,21 @@ class Competition(models.Model):
     telegram_url = models.URLField(max_length=255, null=True, blank=True)
     token_image = CloudflareImagesField(blank=True, null=True)
     image = CloudflareImagesField(blank=True, null=True)
+    shuffle_answers = models.BooleanField(default=False)
 
     participants = models.ManyToManyField(
         UserProfile,
         through="UserCompetition",
         related_name="participated_competitions",
     )
-    winner_count = models.IntegerField(default=0, blank=True)
-    amount_won = BigNumField(default=0, blank=True)
+
+    tx_hash = models.CharField(max_length=1000, null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
 
     objects: CompetitionManager = CompetitionManager()
     questions: models.QuerySet
+    hint_count = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return f"{self.user_profile} - {self.title}"
@@ -138,8 +143,8 @@ class UserCompetition(models.Model):
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     is_winner = models.BooleanField(default=False)
     amount_won = BigNumField(default=0)
-    is_hint_used = models.BooleanField(default=False)
-
+    hint_count = models.PositiveIntegerField(default=0)
+    tx_hash = models.CharField(max_length=1000, blank=True)
     users_answer: models.QuerySet
 
     class Meta:
@@ -243,5 +248,5 @@ class UserAnswer(models.Model):
     def __str__(self):
         return (
             f"{self.user_competition.user_profile} "
-            f"- {self.user_competition.competition.title}  - {self.question.number}"
+            f"- {self.user_competition.competition.title} - {self.question.number}"
         )

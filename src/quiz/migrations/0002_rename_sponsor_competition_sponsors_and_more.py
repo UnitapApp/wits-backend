@@ -2,7 +2,7 @@
 
 import core.fields
 from django.db import migrations
-
+from cloudflare_images.field import CloudflareImagesField
 
 class Migration(migrations.Migration):
 
@@ -27,11 +27,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='competition',
             name='image',
-            field=core.fields.CloudflareImagesField(blank=True, null=True, upload_to='', variant='public'),
+            field=CloudflareImagesField(blank=True, null=True, upload_to='', variant='public'),
         ),
         migrations.AddField(
             model_name='competition',
             name='token_image',
-            field=core.fields.CloudflareImagesField(blank=True, null=True, upload_to='', variant='public'),
+            field=CloudflareImagesField(blank=True, null=True, upload_to='', variant='public'),
         ),
     ]

@@ -6,7 +6,8 @@ from channels.generic.websocket import (
 from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.db.models import Q, Count
-from quiz.serializers import CompetitionSerializer, QuestionSerializer, UserAnswerSerializer
+from authentication.models import UserProfile
+from quiz.serializers import CompetitionSerializer, QuestionSerializer, UserAnswerSerializer, UserCompetitionSerializer
 from quiz.utils import get_quiz_question_state, is_user_eligible_to_participate
 from djangorestframework_camel_case.render import CamelCaseJSONRenderer
 from .models import Competition, Question, Choice, UserCompetition, UserAnswer
@@ -18,14 +19,83 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class QuizConsumer(AsyncJsonWebsocketConsumer):
-    user_competition: UserCompetition
+class BaseJsonConsumer(AsyncJsonWebsocketConsumer):
 
     async def send_json(self, content, close=False):
         """
         Encode the given content as JSON and send it to the client.
         """
         await super().send(text_data=await self.encode_json(content), close=close)
+
+    @classmethod
+    async def encode_json(cls, content):
+        return CamelCaseJSONRenderer().render(content).decode("utf-8")
+
+    @database_sync_to_async
+    def resolve_user(self):
+        if hasattr(self.scope['user'], 'profile'):
+            return self.scope['user'].profile
+
+        return None
+
+
+class QuizListConsumer(BaseJsonConsumer):
+    @database_sync_to_async
+    def get_quiz_list(self):
+        return CompetitionSerializer(Competition.objects.filter(is_active=True), many=True).data
+    
+    @database_sync_to_async
+    def get_enrollments_list(self):
+        if not self.user_profile:
+            return []
+        
+        return UserCompetitionSerializer(UserCompetition.objects.all(), many=True).data
+
+    async def connect(self):
+        self.competition_group_name = "quiz_list"
+        self.user_profile = await self.resolve_user()
+
+        await self.accept()
+
+        if not self.channel_layer:
+            return
+
+        await self.channel_layer.group_add(
+            self.competition_group_name, self.channel_name
+        )
+
+        await self.send_json({ "type": "competition_list", "data": await self.get_quiz_list() })
+        await self.send_json({ "type": "user_enrolls", "data": await self.get_enrollments_list() })
+
+    @database_sync_to_async
+    def resolve_competition(self, pk):
+        competition = Competition.objects.get(pk=pk)
+
+        return CompetitionSerializer(instance=competition).data
+
+    async def update_competition_data(self, event):
+        pk = event["data"]
+
+        data = await self.resolve_competition(pk)
+
+        if data['is_active'] is False:
+            await self.delete_competition(event)
+            return
+
+        await self.send_json({ "type": "update_competition", "data": data })
+
+    async def increase_enrollment(self, event):
+        await self.send_json({ "type": "increase_enrollment", "data": event["data"] })
+        
+    async def delete_competition(self, event):
+        pk = event['data']
+
+        await self.send_json({ "type": "remove_competition", "data": pk })
+
+
+class QuizConsumer(BaseJsonConsumer):
+    user_competition: UserCompetition
+    user_profile: UserProfile
 
     @database_sync_to_async
     def send_user_answers(self):
@@ -34,7 +104,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         
         answers = UserAnswer.objects.filter(user_competition__competition=self.competition, user_competition__user_profile=self.user_profile)
 
-        diff = get_quiz_question_state(self.competition) - answers.count()
+        diff = get_quiz_question_state(self.competition) - 1 - answers.count()
         missed_answers = []
 
         if diff > 0:
@@ -52,10 +122,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         return list(map(lambda x: x if x["selected_choice"] else { **x, "selected_choice": { "is_correct": False, "id": None } }, serialized_answers.data))
 
     @database_sync_to_async
-    def resolve_user(self):
-        return self.scope['user'].profile
-
-    @database_sync_to_async
     def resolve_user_competition(self):
         return UserCompetition.objects.get(user_profile=self.user_profile, competition=self.competition)
     
@@ -64,23 +130,20 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         
         user_competition = self.user_competition
         
-        if not user_competition or user_competition.is_hint_used:
+        if not user_competition or user_competition.hint_count <= 0:
             return
         
         question: Question = Question.objects.get(pk=question_id, competition=self.competition)
 
-        user_competition.is_hint_used = True
+        user_competition.hint_count -= 1
         user_competition.save()
 
         return list(question.choices.filter(is_hinted_choice=True).values_list('pk', flat=True))
 
-    @classmethod
-    async def encode_json(cls, content):
-        return CamelCaseJSONRenderer().render(content).decode("utf-8")
 
     @database_sync_to_async
     def get_competition(self):
-        return Competition.objects.get(pk=self.competition_id)
+        return Competition.objects.filter(pk=self.competition_id).first()
 
     async def send_question(self, event):
         question_data = event["data"]
@@ -92,7 +155,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def calculate_quiz_winners(self):
-        return list(UserCompetition.objects.filter(is_winner=True).values_list("user_profile__wallet_address", flat=True))
+        return list(UserCompetition.objects.filter(is_winner=True).values("user_profile__wallet_address", "tx_hash").distinct())
 
     async def finish_quiz(self, event):
 
@@ -106,7 +169,21 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             competition__pk=self.competition_id, number=index
         ).first()
 
-        return QuestionSerializer(instance=instance).data
+        data: Any = QuestionSerializer(instance=instance).data
+
+        return {"question": {**data, "is_eligible": is_user_eligible_to_participate(self.user_profile, self.competition)}, "type": "new_question"}
+
+    @database_sync_to_async
+    def get_question_with_pk(self, index: int):
+        instance = Question.objects.can_be_shown.filter(
+            competition__pk=self.competition_id, pk=index
+        ).first()
+
+        data: Any = QuestionSerializer(instance=instance).data
+
+        return {"question": {**data, "is_eligible": is_user_eligible_to_participate(self.user_profile, self.competition)}, "type": "new_question"}
+    
+
 
     @database_sync_to_async
     def is_user_eligible_to_participate(self):
@@ -134,7 +211,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
             competition=self.competition
         )
 
-        question_number = get_quiz_question_state(self.competition) + 1
+        question_number = get_quiz_question_state(self.competition)
 
         if self.competition.can_be_shown:
             users_participating = users_participated.annotate(
@@ -154,8 +231,8 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 "prize_to_win": prize_to_win / participating_count if participating_count > 0 else 0,
                 "total_participants_count": self.competition.participants.count(),
                 "questions_count": self.competition.questions.count(),
-                "hint_count": int(not self.user_competition.is_hint_used) if self.user_competition else 0,
-                "previous_round_losses": min(self.get_round_participants(users_participated, question_number - 1) - participating_count, 0)
+                "hint_count": self.user_competition.hint_count if self.user_competition else 0,
+                "previous_round_losses": max(self.get_round_participants(users_participated, question_number - 1) - participating_count, 0)
             },
         }
 
@@ -167,11 +244,11 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         if now < competition_time:
             return {"error": "wait for competition to begin", "data": None}
 
-        state = (await database_sync_to_async(get_quiz_question_state)(competition=self.competition)) + 1
+        state = (await database_sync_to_async(get_quiz_question_state)(competition=self.competition))
 
         question = await self.get_question(state)
 
-        return {"question": question, "type": "new_question"}
+        return question
     
     @database_sync_to_async
     def get_competition_stats(self) -> Any:
@@ -197,7 +274,10 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
         await self.send_json(await self.get_quiz_stats())
 
-        if await database_sync_to_async(lambda: self.competition.is_in_progress)():
+        if self.competition.start_at > timezone.now():
+            await self.send_json({"type": "idle", "message": "wait for quiz to start"})
+
+        elif await database_sync_to_async(lambda: self.competition.is_in_progress)():
             await self.send_json(await self.get_current_question())
         else:
             await self.finish_quiz(None)
@@ -232,7 +312,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json(await self.get_quiz_stats())
 
             if command == "GET_QUESTION":
-                await self.send_json(await self.get_question(data["args"]["index"]))
+                await self.send_json(await self.get_question_with_pk(data["args"]["index"]))
 
             if command == "GET_HINT":
                 hint_choices = await self.send_hint_question(data['args']['question_id'])
@@ -240,24 +320,20 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json({ "type": "hint_question", "data": hint_choices, 'question_id': data['args']['question_id'] })
 
             if command == "ANSWER":
-                if not await self.is_user_eligible_to_participate():
+                is_eligible = await self.is_user_eligible_to_participate()
+
+                if is_eligible is False:
                     return
 
-                res = await self.save_answer(
-                    data["args"]["question_id"],
-                    data["args"]["selected_choice_id"],
+                res = await self.save_answer( # TODO: parse parameters with django camel case
+                    data["args"]["questionId"],
+                    data["args"]["selectedChoiceId"],
                 )
 
-                await self.send_json({ "type": "ANSWER_ADD", "data": {**res, "is_eligible": res["is_correct"], "competition": await self.get_competition_stats()} })
+                await self.send_json({ "type": "add_answer", "data": {**res, "is_eligible": res["is_correct"], "question_id": data['args']['questionId']} })
 
         except Exception as e:
             logger.warn(e)
-        # if not self.channel_layer:
-        #     return
-
-        # await self.channel_layer.group_send(
-        #     self.competition_group_name, {"type": "quiz_message", "message": data}
-        # )
 
     async def quiz_message(self, event):
         message = event["message"]
@@ -266,20 +342,24 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def save_answer(self, question_id, selected_choice_id):
-        question = Question.objects.can_be_shown.get(pk=question_id)
-        selected_choice = Choice.objects.get(pk=selected_choice_id)
+        question: Question = Question.objects.can_be_shown.get(pk=question_id)
+        selected_choice = Choice.objects.filter(pk=selected_choice_id).first()
         user_competition = self.user_competition
 
         answer = UserAnswer.objects.create(
             user_competition=user_competition,
             question=question,
-            selected_choice=selected_choice,
+            selected_choice_id=selected_choice_id,
         )
 
+        if selected_choice and selected_choice.is_correct is True:
+            correct_choice = selected_choice_id
+        else:
+            correct_choice = Choice.objects.filter(question=question, is_correct=True).get().pk
+
         return {
-            "type": "submit_answer_result",
-            "answer": {
-                "is_correct": selected_choice.is_correct,
-                "answer": UserAnswerSerializer(instance=answer, context={ "create": True }).data,
-            }
+            "is_correct": selected_choice.is_correct if selected_choice else False,
+            "answer": UserAnswerSerializer(instance=answer, context={ "create": True }).data,
+            "question_number": question.number,
+            "correct_choice": correct_choice
         }

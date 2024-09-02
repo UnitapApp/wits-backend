@@ -1,3 +1,5 @@
+import random
+
 from rest_framework import serializers
 
 from quiz.models import Choice, Competition, Question, Sponsor, UserAnswer, UserCompetition
@@ -19,6 +21,7 @@ class SmallQuestionSerializer(serializers.ModelSerializer):
 class CompetitionSerializer(serializers.ModelSerializer):
     questions = SmallQuestionSerializer(many=True, read_only=True)
     sponsors = SponsorSerializer(many=True, read_only=True)
+    participants_count = serializers.IntegerField(source='participants.count', read_only=True)
 
     class Meta:
         model = Competition
@@ -42,8 +45,7 @@ class ChoiceSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    # competition = CompetitionSerializer()
-    choices = ChoiceSerializer(many=True)
+    choices = serializers.SerializerMethodField()
     remain_participants_count = serializers.SerializerMethodField(read_only=True)
     total_participants_count = serializers.SerializerMethodField(read_only=True)
     amount_won_per_user = serializers.SerializerMethodField(read_only=True)
@@ -53,6 +55,11 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = "__all__"
 
+    def get_choices(self, obj: Question):
+        choices_data = ChoiceSerializer(obj.choices.all(), many=True).data
+        if obj.competition.shuffle_answers:
+            random.shuffle(choices_data)
+        return choices_data
 
     def get_is_eligible(self, ques: Question):
         if self.context.get("request"):
@@ -142,7 +149,15 @@ class UserCompetitionSerializer(serializers.ModelSerializer):
             "user_profile",
             "is_winner",
             "amount_won",
+            "tx_hash"
         ]
+
+    def create(self, validated_data):
+        competition = validated_data.get('competition')
+        
+        validated_data['hint_count'] = competition.hint_count
+        
+        return super().create(validated_data)
 
 
 class UserCompetitionField(serializers.PrimaryKeyRelatedField):

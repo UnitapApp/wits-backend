@@ -31,7 +31,7 @@ def is_user_eligible_to_participate(
 
     question_number = user_competition.users_answer.count()
 
-    state = get_quiz_question_state(competition)
+    state = get_quiz_question_state(competition) - 1
 
     if state > question_number:
         return False
@@ -55,4 +55,22 @@ def get_quiz_question_state(competition: Competition):
     return min(math.floor(
         (timezone.now() - start_at).seconds
         / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-    ), competition.questions.count())
+    ) + 1, competition.questions.count())
+
+
+def is_competition_finsihed(competition: Competition):
+    start_at = competition.start_at
+
+    if timezone.is_naive(start_at):
+        start_at = timezone.make_aware(start_at, timezone.get_current_timezone())
+    else:
+        start_at = start_at.astimezone(timezone.get_current_timezone())
+
+    if start_at > timezone.now():
+        return False
+    
+    return math.floor(
+        (timezone.now() - start_at).seconds
+        / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+    ) + 1 > competition.questions.count()
+    

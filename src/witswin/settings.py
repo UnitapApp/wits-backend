@@ -43,6 +43,8 @@ IMAGE_DELIVERY_URL = os.environ.get("IMAGE_DELIVERY_URL")
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379")
 
+OP_MAINNET_RPC_URL = os.environ.get("OP_MAINNET_RPC_URL", "https://mainnet.optimism.io")
+OPTIMISM_DISTRIBUTOR_PRIVATE_KEY = os.environ.get("OPTIMISM_DISTRIBUTOR_PRIVATE_KEY")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -61,6 +63,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django.contrib.staticfiles",
     "quiz.apps.QuizConfig",
+    "django_celery_beat",
     "django_celery_results",
     "authentication.apps.AuthenticationConfig",
 ]
@@ -157,8 +160,15 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+STORAGES = {
+    "default": { 
+        "BACKEND": "cloudflare_images.storage.CloudflareImagesStorage",
+    },
+    "staticfiles": { 
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type
@@ -182,9 +192,22 @@ CHANNEL_LAYERS = {
 CSRF_TRUSTED_ORIGINS = [
     "https://wits-backend-production.up.railway.app",
     "http://localhost:4444",
+    "https://api.wits.win"
 ]
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
 APPEND_SLASH = True
+
+
+# REDIS CACHE CONFIG
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
+}
+
 
 
 # ------- Rest framework
@@ -212,3 +235,8 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = "default"
 
 CELERY_TIMEZONE = "UTC"
+CELERY_BEAT_SCHEDULER = os.environ.get(
+    "CELERY_BEAT_SCHEDULER", default="django_celery_beat.schedulers.DatabaseScheduler"
+)
+
+

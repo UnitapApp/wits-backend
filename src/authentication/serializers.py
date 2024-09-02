@@ -1,3 +1,4 @@
+import json
 from rest_framework import serializers
 
 from authentication.models import UserProfile
@@ -29,4 +30,13 @@ class AuthenticateSerializer(serializers.Serializer):
     assert type(self.validated_data) == dict, "validated data must not be empty"
 
 
-    return crypto.verify_signature(self.validated_data.get("address"), self.validated_data.get("message"), self.validated_data.get("signature"))
+    is_verified = crypto.verify_signature(self.validated_data.get("address"), self.validated_data.get("message"), self.validated_data.get("signature"))
+
+    if is_verified is False:
+      return is_verified
+    
+    message = json.loads(self.validated_data['message'])
+
+    
+    return message["message"]["message"] == "Wits Sign In" and message["message"]["URI"] == "https://wits.win"
+

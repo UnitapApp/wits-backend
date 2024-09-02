@@ -9,9 +9,12 @@ from channels.db import database_sync_to_async
 @database_sync_to_async
 def get_user_from_basic_auth(tk: str):
     try:
-        token = Token.objects.filter(key=tk).first()
+        token = Token.objects.filter(key=tk.strip().replace("'", '')).first()
 
-        return token.user if token is not None else AnonymousUser()
+        if token is None:
+            return AnonymousUser()
+        
+        return token.user
     except Exception:
         return AnonymousUser()
 
@@ -29,10 +32,13 @@ class BasicTokenHeaderAuthentication:
 
         headers = dict(scope["headers"])
         cookie = SimpleCookie()
-        cookie.load(str(headers[b'cookie']))
-        print(cookie.keys())
-        if "userToken" in cookie.keys():
-            scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value) # type: ignore
+
+        if not headers.get(b'cookie'):
+            return AnonymousUser()
+
+        cookie.load(headers[b'cookie'].decode("utf-8"))
+        if "userToken" in cookie.keys() or "ws_session" in cookie.keys():
+            scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value or cookie.get("ws_session").value) # type: ignore
         else:
             scope["user"] = AnonymousUser()
 
