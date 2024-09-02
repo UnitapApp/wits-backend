@@ -63,7 +63,8 @@ def evaluate_state(competition: Competition, channel_layer, question_state):
         winners = users_participated.annotate(
             correct_answer_count=Count('users_answer', filter=Q(users_answer__selected_choice__is_correct=True))
         ).filter(
-            correct_answer_count__gte=question_number
+            correct_answer_count__gte=question_number,
+            competition=competition
         ).distinct()
 
         winners_count = winners.count()
