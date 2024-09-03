@@ -49,7 +49,7 @@ class QuizListConsumer(BaseJsonConsumer):
         if not self.user_profile:
             return []
         
-        return UserCompetitionSerializer(UserCompetition.objects.all(), many=True).data
+        return UserCompetitionSerializer(UserCompetition.objects.filter(user_profile=self.user_profile), many=True).data
 
     async def connect(self):
         self.competition_group_name = "quiz_list"
