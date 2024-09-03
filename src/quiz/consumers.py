@@ -211,7 +211,7 @@ class QuizConsumer(BaseJsonConsumer):
             competition=self.competition
         )
 
-        question_number = get_quiz_question_state(self.competition) - 1
+        question_number = get_quiz_question_state(self.competition)
 
         if self.competition.can_be_shown:
             users_participating = users_participated.annotate(
