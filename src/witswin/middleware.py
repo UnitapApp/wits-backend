@@ -42,7 +42,7 @@ class BasicTokenHeaderAuthentication:
             return AnonymousUser()
 
         cookie.load(headers[b"cookie"].decode("utf-8"))
-        if "userToken" in cookie.keys() or "ws_session" in cookie.keys():
+        if cookie.get("userToken") or cookie.get("ws_session"):
             scope["user"] = await get_user_from_basic_auth(cookie.get("userToken").value or cookie.get("ws_session").value)  # type: ignore
 
         elif "auth" in query_params:
