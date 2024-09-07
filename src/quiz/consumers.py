@@ -151,7 +151,8 @@ class QuizConsumer(BaseJsonConsumer):
         await self.send_json({"question": {**json.loads(question_data), "is_eligible": await database_sync_to_async(lambda:  is_user_eligible_to_participate(self.user_profile, self.competition))()}, "type": "new_question"})
 
     async def send_quiz_stats(self, event):
-        await self.send_json(await self.get_quiz_stats())
+        state = event["data"]
+        await self.send_json(await self.get_quiz_stats(state))
 
     @database_sync_to_async
     def calculate_quiz_winners(self):
@@ -205,13 +206,13 @@ class QuizConsumer(BaseJsonConsumer):
         ).count()
 
     @database_sync_to_async
-    def get_quiz_stats(self):
+    def get_quiz_stats(self, state=None):
         prize_to_win = self.competition.prize_amount
         users_participated = UserCompetition.objects.filter(
             competition=self.competition
         )
 
-        question_number = get_quiz_question_state(self.competition)
+        question_number = state or get_quiz_question_state(self.competition)
 
         if self.competition.can_be_shown:
             users_participating = users_participated.annotate(
@@ -228,7 +229,7 @@ class QuizConsumer(BaseJsonConsumer):
             "type": "quiz_stats",
             "data": {
                 "users_participating": participating_count,
-                "prize_to_win": prize_to_win / participating_count if participating_count > 0 else 0,
+                "prize_to_win": prize_to_win if self.competition.split_prize is False else prize_to_win / participating_count if participating_count > 0 else 0,
                 "total_participants_count": self.competition.participants.count(),
                 "questions_count": self.competition.questions.count(),
                 "hint_count": self.user_competition.hint_count if self.user_competition else 0,

@@ -112,7 +112,7 @@ def evaluate_state(competition: Competition, channel_layer, question_state):
 
     async_to_sync(channel_layer.group_send)(  # type: ignore
         f"quiz_{competition.pk}",
-        {"type": "send_quiz_stats", "data": ""},
+        {"type": "send_quiz_stats", "data": question_state},
     )
 
     return REST_BETWEEN_EACH_QUESTION_SECOND
