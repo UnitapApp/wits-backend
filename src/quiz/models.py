@@ -84,6 +84,7 @@ class Competition(models.Model):
     token_image = CloudflareImagesField(blank=True, null=True)
     image = CloudflareImagesField(blank=True, null=True)
     shuffle_answers = models.BooleanField(default=False)
+    split_prize = models.BooleanField(default=True)
 
     participants = models.ManyToManyField(
         UserProfile,

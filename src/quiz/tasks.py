@@ -74,7 +74,10 @@ def evaluate_state(competition: Competition, channel_layer, question_state):
 
         amount_win = competition.prize_amount
 
-        win_amount = amount_win / winners_count if winners_count > 0 else 0
+        if competition.split_prize:
+            win_amount = amount_win / winners_count if winners_count > 0 else 0
+        else:
+            win_amount = amount_win if winners_count > 0 else 0
 
         winners.update(is_winner=True, amount_won=win_amount)
 
