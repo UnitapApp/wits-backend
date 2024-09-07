@@ -27,7 +27,7 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
       - name: Run Tests
-        run: python manage.py test
+        run: cd src && python manage.py test
         env:
           FIELD_KEY: "INSECURE_TEST_KEY"
           SECRET_KEY: "django-insecure-!=_mi0j#rhk7c9p-0wg-3me6y&fk$+fahz6fh)k1n#&@s(9vf5"
