@@ -5,6 +5,11 @@ from django.core.validators import MinValueValidator, RegexValidator
 from cloudflare_images.field import CloudflareImagesField
 
 
+class Lower(models.Func):
+    function = "LOWER"
+    template = "%(function)s(%(expressions)s)"
+
+
 class UserProfile(models.Model):
     username = models.CharField(
         max_length=150,
@@ -21,6 +26,16 @@ class UserProfile(models.Model):
     wallet_address = models.CharField(max_length=512, db_index=True, unique=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     image = CloudflareImagesField(variant="public", null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("wallet_address"), name="unique_wallet_address_case_insensitive"
+            ),
+            models.UniqueConstraint(
+                Lower("username"), name="unique_username_case_insensitive"
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.username or self.wallet_address

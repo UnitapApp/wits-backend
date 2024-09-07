@@ -23,3 +23,6 @@ urlpatterns = [
         name="user-competition-answers",
     ),
 ]
+
+
+app_name = "QUIZ"
