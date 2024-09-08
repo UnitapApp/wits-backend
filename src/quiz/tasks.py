@@ -17,7 +17,7 @@ from quiz.serializers import QuestionSerializer
 import logging
 import math
 
-from quiz.utils import get_quiz_question_state, is_competition_finsihed
+from quiz.utils import get_quiz_question_state, is_competition_finished
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def handle_quiz_end(competition: Competition, winners: list[str], amount):
         win_amount = int(amount)
         tx = manager.distribute(winners, [win_amount for i in winners])
     except SafeContractException as e:
-        handle_quiz_end.delay(competition, winners, amount)
+        handle_quiz_end.delay(competition, winners, amount)  # type: ignore
         raise e
 
     competition.tx_hash = str(tx.hex())

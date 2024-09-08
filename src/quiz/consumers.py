@@ -13,7 +13,12 @@ from quiz.serializers import (
     UserAnswerSerializer,
     UserCompetitionSerializer,
 )
-from quiz.utils import get_quiz_question_state, is_user_eligible_to_participate
+from quiz.utils import (
+    get_previous_round_losses,
+    get_quiz_question_state,
+    get_round_participants,
+    is_user_eligible_to_participate,
+)
 from djangorestframework_camel_case.render import CamelCaseJSONRenderer
 from .models import Competition, Question, Choice, UserCompetition, UserAnswer
 
@@ -254,25 +259,6 @@ class QuizConsumer(BaseJsonConsumer):
             user_profile=self.user_profile, competition=self.competition
         )
 
-    def get_round_participants(self, total_participants, question_number) -> int:
-        if question_number <= 0:
-            return 0
-
-        if question_number > self.competition.questions.count():
-            return 0
-
-        return (
-            total_participants.annotate(
-                correct_answer_count=Count(
-                    "users_answer",
-                    filter=Q(users_answer__selected_choice__is_correct=True),
-                )
-            )
-            .filter(correct_answer_count__gte=question_number)
-            .distinct()
-            .count()
-        )
-
     @database_sync_to_async
     def get_quiz_stats(self, state=None):
         prize_to_win = self.competition.prize_amount
@@ -283,8 +269,8 @@ class QuizConsumer(BaseJsonConsumer):
         question_number = state or get_quiz_question_state(self.competition)
 
         if self.competition.can_be_shown:
-            participating_count = self.get_round_participants(
-                users_participated, question_number
+            participating_count = get_round_participants(
+                self.competition, users_participated, question_number
             )
         else:
             participating_count = users_participated.count()
@@ -307,10 +293,8 @@ class QuizConsumer(BaseJsonConsumer):
                 "hint_count": (
                     self.user_competition.hint_count if self.user_competition else 0
                 ),
-                "previous_round_losses": max(
-                    self.get_round_participants(users_participated, question_number - 1)
-                    - participating_count,
-                    0,
+                "previous_round_losses": get_previous_round_losses(
+                    self.competition, users_participated, question_number
                 ),
             },
         }

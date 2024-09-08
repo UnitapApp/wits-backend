@@ -1,16 +1,20 @@
+from typing import Any
+from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
 
 from authentication.models import UserProfile
-from quiz.models import Choice, Competition, Question, UserCompetition
+from quiz.models import Choice, Competition, Question, UserAnswer, UserCompetition
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
 
 from quiz.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
 from quiz.utils import (
+    get_previous_round_losses,
     get_quiz_question_state,
-    is_competition_finsihed,
+    get_round_participants,
+    is_competition_finished,
     is_user_eligible_to_participate,
 )
 
@@ -22,7 +26,7 @@ HINT_CHOICES = [0, 2]
 PRIZE_AMOUNT = 20000
 
 
-class QuizRestfulTestCase(APITestCase):
+class BaseQuizTestUtils:
     questions_list: list[Question] = []
 
     correct_choice_index = CORRECT_CHOICE_INDEX
@@ -34,12 +38,28 @@ class QuizRestfulTestCase(APITestCase):
 
     token: str
 
+    def create_answer(
+        self, enrollment: UserCompetition, question: Question, choice_index
+    ):
+        selected_choice = Choice.objects.filter(question=question).order_by("id")[
+            choice_index
+        ]
+
+        return UserAnswer.objects.create(
+            user_competition=enrollment,
+            question=question,
+            selected_choice=selected_choice,
+        )
+
     def enroll_user(self, user: UserProfile, competition: Competition):
         return UserCompetition.objects.create(
             competition=competition,
             user_profile=user,
             hint_count=competition.hint_count,
         )
+
+    def get_competition_participants(self):
+        return UserCompetition.objects.filter(competition=self.competition)
 
     def create_test_user(self):
         user = User.objects.create_user("test_user")
@@ -69,6 +89,23 @@ class QuizRestfulTestCase(APITestCase):
             )
 
         return question
+
+    def update_quiz_start_at(self, start_at):
+        self.competition.start_at = start_at
+        self.competition.save(update_fields=["start_at"])
+
+
+class QuizRestfulTestCase(APITestCase, BaseQuizTestUtils):
+    questions_list: list[Question] = []
+
+    correct_choice_index = CORRECT_CHOICE_INDEX
+    hint_choices = HINT_CHOICES
+
+    competition: Competition
+
+    user_profile: UserProfile
+
+    token: str
 
     def reverse_url(self, path, *args, **kwargs):
         return reverse(f"{self.app_name}:{path}", args=args, kwargs=kwargs)
@@ -108,10 +145,10 @@ class QuizRestfulTestCase(APITestCase):
         )
         self.assertTrue(self.competition.can_be_shown, "Competition can be shown")
         self.assertTrue(
-            is_competition_finsihed(self.competition), "Competition is finished"
+            is_competition_finished(self.competition), "Competition is finished"
         )
 
-    def test_user_enroll(self):
+    def test_competition_list(self):
         res = self.client.get(self.reverse_url("competition-list"))
 
         self.assertEqual(res.status_code, 200)
@@ -135,6 +172,7 @@ class QuizRestfulTestCase(APITestCase):
             "Prizes on competition must match",
         )
 
+    def test_enrollment_prevent_when_finished(self):
         enroll_res = self.client.post(
             self.reverse_url("enroll-competition"),
             data={"competition": self.competition.pk},
@@ -144,6 +182,8 @@ class QuizRestfulTestCase(APITestCase):
         self.assertEqual(
             enroll_res.status_code, 400, "Not Allowed to enroll when quiz is finished"
         )
+
+    def test_user_enroll(self):
 
         self.update_quiz_start_at(timezone.now() + timezone.timedelta(minutes=5))
 
@@ -165,6 +205,7 @@ class QuizRestfulTestCase(APITestCase):
             "Added user to the participants count",
         )
 
+    def test_competition_is_active_false(self):
         self.competition.is_active = False
 
         self.competition.save(update_fields=["is_active"])
@@ -172,13 +213,14 @@ class QuizRestfulTestCase(APITestCase):
         data = res.json()
         self.assertEqual(data["count"], 0, "Remove the quiz if is_active is False")
 
-    def test_questions_state(self):
-
+    def test_questions_state_when_finished(self):
         self.assertEqual(
             get_quiz_question_state(self.competition),
             self.competition.questions.count(),
             "The quiz is finished so we are in the last question state",
         )
+
+    def test_questions_first_state(self):
 
         self.update_quiz_start_at(
             timezone.now() - timezone.timedelta(seconds=ANSWER_TIME_SECOND - 2)
@@ -199,6 +241,7 @@ class QuizRestfulTestCase(APITestCase):
             get_quiz_question_state(self.competition), 1, "We are in question 1"
         )
 
+    def test_questions_seconds_state(self):
         self.update_quiz_start_at(
             timezone.now()
             - timezone.timedelta(
@@ -230,7 +273,9 @@ class QuizRestfulTestCase(APITestCase):
             self.user_profile, self.competition
         )
 
-        self.assertTrue(is_eligible)
+        self.assertTrue(
+            is_eligible, "User should be eligible to participate in the quiz"
+        )
 
         self.update_quiz_start_at(
             timezone.now()
@@ -243,7 +288,125 @@ class QuizRestfulTestCase(APITestCase):
             self.user_profile, self.competition
         )
 
-        self.assertFalse(is_eligible)
+        self.assertFalse(
+            is_eligible, "User should NOT be eligible to participate in the quiz"
+        )
 
-    def test_enroll_stats(self):
+
+class QuizUtilsTestCase(TestCase, BaseQuizTestUtils):
+
+    def setUp(self):
+        self.app_name = "QUIZ"
+        self.create_test_user()
+        self.competition = Competition.objects.create(
+            title="Test Competition",
+            start_at=timezone.now() - timezone.timedelta(minutes=5),
+            user_profile=self.user_profile,
+            prize_amount=PRIZE_AMOUNT,
+            chain_id=10,
+            token_decimals=6,
+            token="USDC",
+            token_address="0x",
+            email_url="test@test.test",
+        )
+
+        self.questions_list = [
+            self.create_sample_question(1),
+            self.create_sample_question(2),
+            self.create_sample_question(3),
+            self.create_sample_question(4),
+            self.create_sample_question(5),
+        ]
+
+    def create_user_profile(self, name="test_user1", address="0x1"):
+        user = User.objects.create_user(name)
+        profile = UserProfile.objects.create(
+            user=user, wallet_address=address, username=name
+        )
+
+        return profile
+
+    def enroll_user(self, user: UserProfile, competition: Competition):
+        return UserCompetition.objects.create(
+            competition=competition,
+            user_profile=user,
+            hint_count=competition.hint_count,
+        )
+
+    def test_enroll_stats_first_question(self):
+        user1 = self.create_user_profile("ali", "0xFD")
+        user2 = self.create_user_profile("mamad", "0x862")
+        user3 = self.create_user_profile("mamadreza", "0x862FA")
+
+        user_enroll1 = self.enroll_user(user1, self.competition)
+        user_enroll2 = self.enroll_user(user2, self.competition)
+        user_enroll3 = self.enroll_user(user3, self.competition)
+
+        self.update_quiz_start_at(timezone.now())
+
+        question_state = get_quiz_question_state(self.competition)
+
+        self.assertEqual(question_state, 1, "Must be at first question")
+
+        participants = get_round_participants(
+            self.competition, self.get_competition_participants(), question_state
+        )
+
+        self.assertEqual(participants, 3, "3 Participants must be active")
+
+        self.update_quiz_start_at(
+            timezone.now()
+            - timezone.timedelta(
+                seconds=ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND
+            )
+        )
+
+        question_state = get_quiz_question_state(self.competition)
+
+        participants_q1 = get_round_participants(
+            self.competition, self.get_competition_participants(), question_state
+        )
+
+        losers = get_previous_round_losses(
+            self.competition, self.get_competition_participants(), question_state
+        )
+
+        self.assertEqual(participants_q1, 0, "No participants answered")
+        self.assertEqual(losers, 3, "All players lost")
+
+        question: Any = self.competition.questions.order_by("number").first()
+
+        answer = self.create_answer(
+            user_enroll1,
+            question,
+            CORRECT_CHOICE_INDEX,
+        )
+
+        self.assertTrue(
+            answer.selected_choice.is_correct, "Must have selected the correct answer"
+        )
+
+        answer = self.create_answer(user_enroll2, question, 0)
+
+        self.assertFalse(
+            answer.selected_choice.is_correct, "Must have selected the WRONG answer"
+        )
+
+        participants_q1 = get_round_participants(
+            self.competition, self.get_competition_participants(), question_state
+        )
+        losers = get_previous_round_losses(
+            self.competition, self.get_competition_participants(), question_state
+        )
+
+        self.assertEqual(participants_q1, 1, "One participants answered")
+        self.assertEqual(losers, 2, "2 Players Lost")
+
+
+class QuizConsumerTestCase(TestCase):
+
+    def setUp(self):
+        pass
+
+    async def test_user_stats(self):
         pass

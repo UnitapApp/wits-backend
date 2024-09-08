@@ -10,7 +10,6 @@ from core.fields import BigNumField
 from cloudflare_images.field import CloudflareImagesField
 
 
-
 class Sponsor(models.Model):
     name = models.CharField(max_length=255, unique=True)
     link = models.URLField(max_length=255)
@@ -66,9 +65,7 @@ class Competition(models.Model):
         related_name="competitions",
         blank=True,
     )
-    user_profile = models.ForeignKey(
-        UserProfile, on_delete=models.CASCADE, blank=True
-    )
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, blank=True)
     details = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     start_at = models.DateTimeField(null=False, blank=False)
@@ -97,7 +94,7 @@ class Competition(models.Model):
     is_active = models.BooleanField(default=True)
 
     objects: CompetitionManager = CompetitionManager()
-    questions: models.QuerySet
+    questions: models.QuerySet["Question"]
     hint_count = models.PositiveIntegerField(default=1)
 
     def __str__(self):
@@ -188,16 +185,14 @@ class Question(models.Model):
     @property
     def answer_can_be_shown(self):
         answer_time = ANSWER_TIME_SECOND - 2
-        
-        seconds = (self.number - 1) * (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND) + answer_time
+
+        seconds = (self.number - 1) * (
+            ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND
+        ) + answer_time
 
         return (
-            (self.competition.start_at
-            + timezone.timedelta(
-                seconds=seconds
-            ))
-            <= timezone.now()
-        )
+            self.competition.start_at + timezone.timedelta(seconds=seconds)
+        ) <= timezone.now()
 
     objects: QuestionManager = QuestionManager()
 

@@ -1,5 +1,7 @@
 import math
 from django.utils import timezone
+from django.db.models import Count, Q
+from django.db.models.manager import BaseManager
 
 from authentication.models import UserProfile
 from quiz.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
@@ -39,9 +41,8 @@ def is_user_eligible_to_participate(
     return True
 
 
-
 def get_quiz_question_state(competition: Competition):
- 
+
     start_at = competition.start_at
 
     if timezone.is_naive(start_at):
@@ -51,14 +52,18 @@ def get_quiz_question_state(competition: Competition):
 
     if start_at > timezone.now():
         return 0
-    
-    return min(math.floor(
-        (timezone.now() - start_at).seconds
-        / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-    ) + 1, competition.questions.count())
+
+    return min(
+        math.floor(
+            (timezone.now() - start_at).seconds
+            / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+        )
+        + 1,
+        competition.questions.count(),
+    )
 
 
-def is_competition_finsihed(competition: Competition):
+def is_competition_finished(competition: Competition):
     start_at = competition.start_at
 
     if timezone.is_naive(start_at):
@@ -68,9 +73,55 @@ def is_competition_finsihed(competition: Competition):
 
     if start_at > timezone.now():
         return False
-    
-    return math.floor(
-        (timezone.now() - start_at).seconds
-        / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
-    ) + 1 > competition.questions.count()
-    
+
+    return (
+        math.floor(
+            (timezone.now() - start_at).seconds
+            / (ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND)
+        )
+        + 1
+        > competition.questions.count()
+    )
+
+
+def get_round_participants(
+    competition: Competition,
+    total_participants: BaseManager[UserCompetition],
+    question_number,
+) -> int:
+    if question_number <= 0:
+        return total_participants.count()
+
+    if question_number > competition.questions.count():
+        return 0
+
+    return (
+        total_participants.annotate(
+            correct_answer_count=Count(
+                "users_answer",
+                filter=Q(users_answer__selected_choice__is_correct=True),
+            )
+        )
+        .filter(correct_answer_count__gte=question_number - 1)
+        .distinct()
+        .count()
+    )
+
+
+def get_previous_round_losses(
+    competition: Competition,
+    total_participants: BaseManager[UserCompetition],
+    question_number: int,
+):
+    if competition.can_be_shown:
+        participating_count = get_round_participants(
+            competition, total_participants, question_number
+        )
+    else:
+        participating_count = total_participants.count()
+
+    return max(
+        get_round_participants(competition, total_participants, question_number - 1)
+        - participating_count,
+        0,
+    )
