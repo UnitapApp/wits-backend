@@ -161,14 +161,13 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STORAGES = {
-    "default": { 
+    "default": {
         "BACKEND": "cloudflare_images.storage.CloudflareImagesStorage",
     },
-    "staticfiles": { 
+    "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
-
 
 
 # Default primary key field type
@@ -192,7 +191,7 @@ CHANNEL_LAYERS = {
 CSRF_TRUSTED_ORIGINS = [
     "https://wits-backend-production.up.railway.app",
     "http://localhost:4444",
-    "https://api.wits.win"
+    "https://api.wits.win",
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
@@ -207,7 +206,6 @@ CACHES = {
         "LOCATION": REDIS_URL,
     }
 }
-
 
 
 # ------- Rest framework
@@ -238,5 +236,3 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = os.environ.get(
     "CELERY_BEAT_SCHEDULER", default="django_celery_beat.schedulers.DatabaseScheduler"
 )
-
-
