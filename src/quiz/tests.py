@@ -2,13 +2,17 @@ from django.utils import timezone
 from django.urls import reverse
 
 from authentication.models import UserProfile
-from quiz.models import Choice, Competition, Question
+from quiz.models import Choice, Competition, Question, UserCompetition
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
 
 from quiz.constants import ANSWER_TIME_SECOND, REST_BETWEEN_EACH_QUESTION_SECOND
-from quiz.utils import get_quiz_question_state, is_competition_finsihed
+from quiz.utils import (
+    get_quiz_question_state,
+    is_competition_finsihed,
+    is_user_eligible_to_participate,
+)
 
 User = get_user_model()
 
@@ -31,7 +35,11 @@ class QuizRestfulTestCase(APITestCase):
     token: str
 
     def enroll_user(self, user: UserProfile, competition: Competition):
-        pass
+        return UserCompetition.objects.create(
+            competition=competition,
+            user_profile=user,
+            hint_count=competition.hint_count,
+        )
 
     def create_test_user(self):
         user = User.objects.create_user("test_user")
@@ -212,3 +220,30 @@ class QuizRestfulTestCase(APITestCase):
         self.assertEqual(
             get_quiz_question_state(self.competition), 2, "We are in question 2"
         )
+
+    def test_user_eligibily(self):
+        user_enrollment = self.enroll_user(self.user_profile, self.competition)
+
+        self.update_quiz_start_at(timezone.now() - timezone.timedelta(seconds=5))
+
+        is_eligible = is_user_eligible_to_participate(
+            self.user_profile, self.competition
+        )
+
+        self.assertTrue(is_eligible)
+
+        self.update_quiz_start_at(
+            timezone.now()
+            - timezone.timedelta(
+                seconds=ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND
+            )
+        )
+
+        is_eligible = is_user_eligible_to_participate(
+            self.user_profile, self.competition
+        )
+
+        self.assertFalse(is_eligible)
+
+    def test_enroll_stats(self):
+        pass
