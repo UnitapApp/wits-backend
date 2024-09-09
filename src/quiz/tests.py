@@ -336,6 +336,106 @@ class QuizUtilsTestCase(TestCase, BaseQuizTestUtils):
             hint_count=competition.hint_count,
         )
 
+    def test_enroll_stats(self):
+        users = [
+            self.create_user_profile("ali", "0xFD"),
+            self.create_user_profile("mamad", "0x862"),
+            self.create_user_profile("mamadreza", "0x862FA"),
+        ]
+
+        user_enrolls = []
+
+        for user in users:
+            user_enrolls.append(self.enroll_user(user, self.competition))
+
+        self.update_quiz_start_at(
+            timezone.now() - timezone.timedelta(seconds=ANSWER_TIME_SECOND + 1)
+        )
+
+        question: Any = self.competition.questions.order_by("number").first()
+
+        for user_enroll in user_enrolls[:2]:
+            answer = self.create_answer(
+                user_enroll,
+                question,
+                CORRECT_CHOICE_INDEX,
+            )
+
+        question_state = get_quiz_question_state(self.competition)
+
+        participants_q1 = get_round_participants(
+            self.competition, self.get_competition_participants(), question_state + 1
+        )
+
+        losers = get_previous_round_losses(
+            self.competition, self.get_competition_participants(), question_state + 1
+        )
+
+        self.assertEqual(losers, 1, "One user didn't answer")
+        self.assertEqual(participants_q1, 2, "Two users answered correctly")
+
+        self.update_quiz_start_at(
+            timezone.now()
+            - timezone.timedelta(
+                seconds=ANSWER_TIME_SECOND
+                + REST_BETWEEN_EACH_QUESTION_SECOND
+                + ANSWER_TIME_SECOND
+                + 1
+            )
+        )
+
+        question: Any = self.competition.questions.order_by("number")[1]
+
+        for user_enroll in user_enrolls[:2]:
+            answer = self.create_answer(
+                user_enroll,
+                question,
+                CORRECT_CHOICE_INDEX,
+            )
+
+        question_state = get_quiz_question_state(self.competition)
+
+        participants_q1 = get_round_participants(
+            self.competition, self.get_competition_participants(), question_state + 1
+        )
+
+        losers = get_previous_round_losses(
+            self.competition, self.get_competition_participants(), question_state + 1
+        )
+
+        self.assertEqual(losers, 0, "No losers")
+        self.assertEqual(participants_q1, 2, "Two users answered correctly")
+
+        self.update_quiz_start_at(
+            timezone.now()
+            - timezone.timedelta(
+                seconds=(ANSWER_TIME_SECOND + REST_BETWEEN_EACH_QUESTION_SECOND) * 2
+                + ANSWER_TIME_SECOND
+                + 1
+            )
+        )
+
+        question: Any = self.competition.questions.order_by("number")[2]
+
+        answer = self.create_answer(
+            user_enrolls[0],
+            question,
+            CORRECT_CHOICE_INDEX,
+        )
+
+        question_state = get_quiz_question_state(self.competition)
+
+        participants_q1 = get_round_participants(
+            self.competition, self.get_competition_participants(), question_state + 1
+        )
+
+        losers = get_previous_round_losses(
+            self.competition, self.get_competition_participants(), question_state + 1
+        )
+
+        self.assertEqual(losers, 1, "One loser")
+        self.assertEqual(participants_q1, 1, "One user answered correctly")
+
     def test_enroll_stats_first_question(self):
         user1 = self.create_user_profile("ali", "0xFD")
         user2 = self.create_user_profile("mamad", "0x862")

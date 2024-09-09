@@ -90,13 +90,13 @@ def is_competition_finished(competition: Competition):
 def get_round_participants(
     competition: Competition,
     total_participants: BaseManager[UserCompetition],
-    question_number,
+    question_number: int,
 ) -> int:
     if question_number <= 0:
         return total_participants.count()
 
-    if question_number > competition.questions.count():
-        return 0
+    total_questions = competition.questions.count()
+    question_number = min(question_number, total_questions)
 
     return (
         total_participants.annotate(

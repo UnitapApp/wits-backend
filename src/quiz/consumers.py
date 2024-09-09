@@ -268,12 +268,9 @@ class QuizConsumer(BaseJsonConsumer):
 
         question_number = state or get_quiz_question_state(self.competition)
 
-        if self.competition.can_be_shown:
-            participating_count = get_round_participants(
-                self.competition, users_participated, question_number
-            )
-        else:
-            participating_count = users_participated.count()
+        participating_count = get_round_participants(
+            self.competition, users_participated, question_number
+        )
 
         return {
             "type": "quiz_stats",
