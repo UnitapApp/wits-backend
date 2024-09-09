@@ -2,7 +2,7 @@
   "builds": [
     {
       "src": "src/witswin/asgi.py",
-      "use": "@ardnt/vercel-python-wsgi",
+      "use": "@vercel/python",
       "config": { "maxLambdaSize": "15mb" }
     }
   ],
