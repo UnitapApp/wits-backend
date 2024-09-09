@@ -357,6 +357,21 @@ class QuizUtilsTestCase(TestCase, BaseQuizTestUtils):
 
         self.assertEqual(participants, 3, "3 Participants must be active")
 
+        self.assertTrue(
+            is_user_eligible_to_participate(user1, self.competition),
+            "User 1 must be eligible",
+        )
+
+        self.assertTrue(
+            is_user_eligible_to_participate(user2, self.competition),
+            "User 2 must be eligible",
+        )
+
+        self.assertTrue(
+            is_user_eligible_to_participate(user3, self.competition),
+            "User 3 must be eligible",
+        )
+
         self.update_quiz_start_at(
             timezone.now()
             - timezone.timedelta(

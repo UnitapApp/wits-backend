@@ -20,6 +20,9 @@ def is_user_eligible_to_participate(
     except UserCompetition.DoesNotExist:
         return False
 
+    if competition.start_at >= timezone.now():
+        return True
+
     has_wrong_answer = user_competition.users_answer.filter(
         selected_choice__is_correct=False
     ).exists()

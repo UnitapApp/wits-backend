@@ -14,10 +14,10 @@ from quiz.constants import (
 from quiz.contracts import ContractManager, SafeContractException
 from quiz.models import Competition, Question, UserCompetition
 from quiz.serializers import QuestionSerializer
-import logging
-import math
+from quiz.utils import get_quiz_question_state
 
-from quiz.utils import get_quiz_question_state, is_competition_finished
+import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def evaluate_state(competition: Competition, channel_layer, question_state):
         if competition.split_prize:
             win_amount = amount_win / winners_count if winners_count > 0 else 0
         else:
-            win_amount = amount_win if winners_count > 0 else 0
+            win_amount = amount_win
 
         winners.update(is_winner=True, amount_won=win_amount)
 
@@ -110,10 +110,13 @@ def evaluate_state(competition: Competition, channel_layer, question_state):
 
     time.sleep(ANSWER_TIME_SECOND)
 
-    async_to_sync(channel_layer.group_send)(  # type: ignore
-        f"quiz_{competition.pk}",
-        {"type": "send_quiz_stats", "data": question_state + 1},
-    )
+    def send_quiz_stats():
+        async_to_sync(channel_layer.group_send)(  # type: ignore
+            f"quiz_{competition.pk}",
+            {"type": "send_quiz_stats", "data": question_state + 1},
+        )
+
+    threading.Timer(1.0, send_quiz_stats).start()
 
     return REST_BETWEEN_EACH_QUESTION_SECOND
 
@@ -144,7 +147,6 @@ def setup_competition_to_start(self, competition_pk):
             state = "FINISHED"
             break
 
-    time.sleep(2)
     async_to_sync(channel_layer.group_send)(  # type: ignore
         f"quiz_{competition.pk}",
         {"type": "send_quiz_stats", "data": None},
