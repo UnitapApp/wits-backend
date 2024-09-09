@@ -40,6 +40,9 @@ CLOUDFLARE_IMAGES_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
 CLOUDFLARE_IMAGES_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_IMAGES_ACCOUNT_HASH = os.environ.get("CLOUDFLARE_ACCOUNT_HASH")
 IMAGE_DELIVERY_URL = os.environ.get("IMAGE_DELIVERY_URL")
+PRIVY_JWKS_URL = os.environ.get("PRIVY_JWKS_ENDPOINT")
+PRIVY_APP_SECRET = os.environ.get("PRIVY_APP_SECRET")
+PRIVY_APP_ID = os.environ.get("PRIVY_APP_ID")
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379")
 
@@ -61,6 +64,7 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "rest_framework",
     "rest_framework.authtoken",
+    "rest_framework_simplejwt",
     "django.contrib.staticfiles",
     "quiz.apps.QuizConfig",
     "django_celery_beat",
@@ -213,6 +217,7 @@ CACHES = {
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "authentication.auth.PrivyJWTAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
