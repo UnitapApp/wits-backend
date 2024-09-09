@@ -25,9 +25,9 @@ def is_user_eligible_to_participate(
     ).exists()
 
     if (
-        competition.is_active
-        and competition.is_in_progress
-        and (not has_wrong_answer) is False
+        competition.is_active is False
+        or competition.is_in_progress is False
+        or has_wrong_answer
     ):
         return False
 

@@ -316,6 +316,9 @@ class QuizUtilsTestCase(TestCase, BaseQuizTestUtils):
             self.create_sample_question(3),
             self.create_sample_question(4),
             self.create_sample_question(5),
+            self.create_sample_question(6),
+            self.create_sample_question(7),
+            self.create_sample_question(8),
         ]
 
     def create_user_profile(self, name="test_user1", address="0x1"):
@@ -401,6 +404,74 @@ class QuizUtilsTestCase(TestCase, BaseQuizTestUtils):
 
         self.assertEqual(participants_q1, 1, "One participants answered")
         self.assertEqual(losers, 2, "2 Players Lost")
+
+    def test_enroll_stats_last_question(self):
+        user1 = self.create_user_profile("ali", "0xFD")
+        user2 = self.create_user_profile("mamad", "0x862")
+        user3 = self.create_user_profile("mamadreza", "0x862FA")
+
+        user_enroll1 = self.enroll_user(user1, self.competition)
+        user_enroll2 = self.enroll_user(user2, self.competition)
+        user_enroll3 = self.enroll_user(user3, self.competition)
+
+        for question in self.competition.questions.all():
+            answer = self.create_answer(
+                user_enroll1,
+                question,
+                CORRECT_CHOICE_INDEX,
+            )
+
+            answer2 = self.create_answer(user_enroll2, question, 0)
+
+            if question.number < 3:
+                answer3 = self.create_answer(
+                    user_enroll3, question, CORRECT_CHOICE_INDEX
+                )
+
+        self.update_quiz_start_at(
+            timezone.now()
+            - timezone.timedelta(
+                seconds=(
+                    (REST_BETWEEN_EACH_QUESTION_SECOND + ANSWER_TIME_SECOND)
+                    * self.competition.questions.count()
+                )
+                - REST_BETWEEN_EACH_QUESTION_SECOND
+                - 3
+            )
+        )
+
+        question_state = get_quiz_question_state(self.competition)
+
+        self.assertEqual(
+            question_state,
+            self.competition.questions.count(),
+            "Must be at last question",
+        )
+
+        participants = get_round_participants(
+            self.competition, self.get_competition_participants(), question_state
+        )
+
+        losers = get_previous_round_losses(
+            self.competition, self.get_competition_participants(), question_state
+        )
+
+        self.assertEqual(participants, 1, "One participants answered correctly")
+        self.assertEqual(losers, 0, "No player lost at last question")
+
+        self.assertFalse(
+            is_user_eligible_to_participate(user2, self.competition),
+            "User 2 is not allowed to participate",
+        )
+        self.assertFalse(
+            is_user_eligible_to_participate(user3, self.competition),
+            "User 3 is not allowed to participate",
+        )
+
+        self.assertTrue(
+            is_user_eligible_to_participate(user1, self.competition),
+            "User 1 is allowed to participate",
+        )
 
 
 class QuizConsumerTestCase(TestCase):
