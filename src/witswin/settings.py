@@ -64,7 +64,6 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "rest_framework",
     "rest_framework.authtoken",
-    "rest_framework_simplejwt",
     "django.contrib.staticfiles",
     "quiz.apps.QuizConfig",
     "django_celery_beat",
