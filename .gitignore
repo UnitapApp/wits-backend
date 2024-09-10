@@ -183,3 +183,5 @@ media
 
 
 src/staticfiles/
+
+.DS_Store
