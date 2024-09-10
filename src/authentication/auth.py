@@ -39,12 +39,18 @@ def deserialize_public_key(pem_data):
 
 
 @cache_function_in_seconds(3600)
-def get_public_key(token: str):
+def get_jwk_keys():
     response = requests.get(PUBLIC_KEY_URL)
 
     assert response.ok, "Unable to fetch public keys"
 
     jwks = response.json()
+
+    return jwks
+
+
+def get_public_key(token: str):
+    jwks = get_jwk_keys()
 
     token_kid = jwt.get_unverified_header(token)["kid"]
     public_key_data = next(key for key in jwks["keys"] if key["kid"] == token_kid)
@@ -55,8 +61,6 @@ def get_public_key(token: str):
     public_numbers = ec.EllipticCurvePublicNumbers(x_int, y_int, ec.SECP256R1())
 
     public_key = public_numbers.public_key()
-
-    # return jwt.algorithms.ECAlgorithm.from_jwk(jwks["keys"][0])
 
     return serialize_public_key(public_key)
 
