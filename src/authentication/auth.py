@@ -74,9 +74,8 @@ def get_privy_user_by_id(privy_id: str):
 
 
 class PrivyJWTAuthentication(BaseAuthentication):
-    def resolve_from_token(self, auth_header: str):
+    def resolve_from_token(self, token: str):
         try:
-            token = auth_header.split(" ")[1]
             public_key = deserialize_public_key(get_public_key(token))
 
             payload = jwt.decode(
@@ -127,4 +126,6 @@ class PrivyJWTAuthentication(BaseAuthentication):
         if not auth_header:
             return None
 
-        return self.resolve_from_token(auth_header)
+        token = auth_header.split(" ")[1]
+
+        return self.resolve_from_token(token)
