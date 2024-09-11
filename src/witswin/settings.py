@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "django_celery_results",
     "authentication.apps.AuthenticationConfig",
+    "stats.apps.StatsConfig",
 ]
 
 
