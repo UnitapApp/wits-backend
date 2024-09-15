@@ -15,16 +15,16 @@ Witswin is a Django-based web application designed for hosting quizzes and compe
 - [x] Privy authentication
 - [x] Websocket implementation
 
-- [] Dashboard for managing quizzes
-- [] Quiz entry fees
-- [] Random question decision
-- [] Telegram mini app implementation
-- [] Spectators in quiz
-- [] Periodic quizzes
-- [] Random questions from quiz bank
-- [] Stats Hint
-- [] Extra time Hint
-- [] Veteran Hint
+- [ ] Dashboard for managing quizzes
+- [ ] Quiz entry fees
+- [ ] Random question decision
+- [ ] Telegram mini app implementation
+- [ ] Spectators in quiz
+- [ ] Periodic quizzes
+- [ ] Random questions from quiz bank
+- [ ] Stats Hint
+- [ ] Extra time Hint
+- [ ] Veteran Hint
 
 
 ## Contributing
