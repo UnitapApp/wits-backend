@@ -36,3 +36,4 @@ pillow==10.4.0
 channels[daphne]==4.1
 channels_redis==4.2
 django-cloudflare-images~=0.6.0
+python-decouple==3.8

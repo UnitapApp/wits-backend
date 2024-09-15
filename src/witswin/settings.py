@@ -14,6 +14,8 @@ import os
 
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
+from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -236,3 +238,23 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = os.environ.get(
     "CELERY_BEAT_SCHEDULER", default="django_celery_beat.schedulers.DatabaseScheduler"
 )
+
+
+# Email Config
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config("EMAIL_HOST", cast=str, default=None)
+EMAIL_PORT = config("EMAIL_PORT", cast=str, default="587")  # Recommended
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", cast=str, default=None)
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", cast=str, default=None)
+DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER", cast=str, default=None)
+EMAIL_USE_TLS = config(
+    "EMAIL_USE_TLS", cast=bool, default=True
+)  # Use EMAIL_PORT 587 for TLS
+SERVER_EMAIL = config("EMAIL_HOST_USER", cast=str, default=None)
+
+
+ADMINS = [
+    ("Ali Maktabi", "maktabi876@gmail.com"),
+    ("Sullivan", "sullivany92@gmail.com"),
+]
