@@ -1,21 +1,30 @@
 
 
 # Witswin Project
-================
+
 
 ## Overview
---------
 
 Witswin is a Django-based web application designed for hosting quizzes and competitions. The project aims to provide a platform for users to participate in quizzes, compete with others, and win prizes.
 
 ## Features
---------
 
 
 - [x] User registration and authentication
 - [x] Quiz implementation and score calculation
 - [x] Privy authentication
 - [x] Websocket implementation
+
+- [] Dashboard for managing quizzes
+- [] Quiz entry fees
+- [] Random question decision
+- [] Telegram mini app implementation
+- [] Spectators in quiz
+- [] Periodic quizzes
+- [] Random questions from quiz bank
+- [] Stats Hint
+- [] Extra time Hint
+- [] Veteran Hint
 
 
 ## Contributing
