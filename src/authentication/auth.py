@@ -122,14 +122,24 @@ class PrivyJWTAuthentication(BaseAuthentication):
             privy_user = PrivyProfile.objects.create(profile=user_profile, id=user_id)
 
             return (user, token)
-        except Exception as e:
+
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed("Token has expired")
+        except jwt.InvalidTokenError:
             raise AuthenticationFailed("Invalid token")
+        except Exception as e:
+            raise AuthenticationFailed(f"Error during authentication: {str(e)}")
 
     def authenticate(self, request):
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             return None
 
-        token = auth_header.split(" ")[1]
+        parts = auth_header.split(" ")
+
+        if len(parts) != 2 or parts[0] != "Bearer":
+            return None
+
+        token = parts[1]
 
         return self.resolve_from_token(token)
