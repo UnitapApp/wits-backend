@@ -1,5 +1,5 @@
 bip-utils==2.3.0
-django==5
+django==5.0.8
 djangorestframework==3.15.2
 djangorestframework-camel-case==1.4.2
 dj-database-url==0.5.0
