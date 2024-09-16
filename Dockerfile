@@ -1,5 +1,18 @@
 FROM pypy:3.10
 
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustc --version && cargo --version
+
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
