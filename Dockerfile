@@ -1,5 +1,17 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10.11
+FROM pypy:3.10
+
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustc --version && cargo --version
+
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -9,7 +21,6 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /usr/src/app
 
 RUN apt update && apt install gcc
-
 
 
 # RUN apt-get update && \
@@ -27,6 +38,7 @@ RUN pip install --upgrade pip
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 
+RUN ln -s /usr/local/bin/pypy3 /usr/local/bin/python
 
 
 # Copy project
@@ -35,4 +47,4 @@ COPY ./start.sh .
 COPY ./celery.sh .
 
 
-RUN python manage.py collectstatic --noinput
+# RUN pypy3 manage.py collectstatic --noinput

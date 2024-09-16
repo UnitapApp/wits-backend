@@ -4,7 +4,7 @@ services:
 
   celery:
     platform: linux/arm64
-    build: .
+    build: Dockerfile.dev
     command: celery -A witswin worker --beat --concurrency 1 -l INFO 
     volumes:
       - ./src/:/usr/src/app
