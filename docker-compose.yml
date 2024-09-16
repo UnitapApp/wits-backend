@@ -3,6 +3,7 @@ name: "wits"
 services:
 
   celery:
+    platform: linux/arm64
     build: .
     command: celery -A witswin worker --beat --concurrency 1 -l INFO 
     volumes:
@@ -20,11 +21,12 @@ services:
       - base
 
   app:
+    platform: linux/arm64
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     build: .
-    command: python manage.py runserver 0.0.0.0:4444
+    command: pypy manage.py runserver 0.0.0.0:4444
     environment:
       - FIELD_KEY=${FIELD_KEY}
       - SECRET_KEY=${SECRET_KEY}
@@ -58,6 +60,12 @@ services:
       - base
     ports:
       - 5432:5432
+      
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:6.2-alpine
