@@ -47,4 +47,4 @@ COPY ./start.sh .
 COPY ./celery.sh .
 
 
-RUN pypy3 manage.py collectstatic --noinput
+# RUN pypy3 manage.py collectstatic --noinput
