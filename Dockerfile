@@ -37,7 +37,7 @@ WORKDIR /usr/src/app
 RUN apt update && apt install -y gcc
 
 # Copy installed Python packages from builder stage
-COPY --from=builder /opt/pypy/lib/pypy3.10/site-packages /opt/pypy/lib/pypy3.10/site-packages
+COPY --from=builder /opt/pypy/lib/pypy3.10/ /opt/pypy/lib/pypy3.10/
 
 # Link pypy3 to python
 RUN ln -s /usr/local/bin/pypy3 /usr/local/bin/python
