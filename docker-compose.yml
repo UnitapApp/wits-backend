@@ -4,7 +4,11 @@ services:
 
   celery:
     platform: linux/arm64
-    build: Dockerfile.dev
+
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    
     command: celery -A witswin worker --beat --concurrency 1 -l INFO 
     volumes:
       - ./src/:/usr/src/app
@@ -25,7 +29,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    
     command: pypy manage.py runserver 0.0.0.0:4444
     environment:
       - FIELD_KEY=${FIELD_KEY}
