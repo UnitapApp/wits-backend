@@ -44,16 +44,6 @@ We welcome contributions from developers, designers, and anyone interested in im
 * Submit a pull request to the main repository.
 * Ensure your code follows the project's coding standards and guidelines.
 
-### 3. Translating the Project
-
-* If you'd like to translate the project into your language, create a new issue on the GitHub issue tracker.
-* We'll provide guidance on how to proceed with the translation.
-
-### 4. Providing Feedback
-
-* Share your thoughts on the project's features, user experience, and overall direction.
-* Create a new issue on the GitHub issue tracker or email us at [insert email].
-
 ## Getting Started
 ---------------
 
@@ -90,22 +80,3 @@ PRIVY_JWKS_URL=""
 ```
 docker compose up
 ```
-
-
-
-## License
--------
-
-The project is licensed under the MIT License. See the LICENSE file for more information.
-
-<!-- ## Acknowledgments
----------------
-
-We'd like to thank the following contributors for their help and support:
-
-* [Insert names] -->
-
-## Contact Us
-------------
-
-If you have any questions, suggestions, or feedback, please don't hesitate to contact us at team@wits.win.

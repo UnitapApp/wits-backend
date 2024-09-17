@@ -33,7 +33,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     
-    command: pypy manage.py runserver 0.0.0.0:4444
+    command: python manage.py runserver 0.0.0.0:4444
     environment:
       - FIELD_KEY=${FIELD_KEY}
       - SECRET_KEY=${SECRET_KEY}
