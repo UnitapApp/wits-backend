@@ -3,7 +3,6 @@ name: "wits"
 services:
 
   celery:
-    platform: linux/arm64
 
     build:
       context: .
@@ -25,7 +24,6 @@ services:
       - base
 
   app:
-    platform: linux/arm64
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

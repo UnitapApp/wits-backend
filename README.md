@@ -75,6 +75,13 @@ PRIVY_APP_SECRET=""
 PRIVY_JWKS_URL=""
 ```
 
+
+### Create base network 
+
+```
+docker network create base
+```
+
 ` Launch docker instance:`
 
 ```
