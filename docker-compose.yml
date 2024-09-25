@@ -3,7 +3,7 @@ name: "wits"
 services:
 
   celery:
-
+    image: alimaktabi55/wits:v1.0
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,6 +24,8 @@ services:
       - base
 
   app:
+    image: alimaktabi55/wits:v1.0
+ 
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
